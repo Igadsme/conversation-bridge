@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DrawingUtils, FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision'
-import './CameraView.css'
+import './cameraview.css'
 
 // Keep this version in sync with @mediapipe/tasks-vision in package.json
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm'
