@@ -69,7 +69,7 @@ A detailed log of each step, with the commands used, is in [`steps.txt`](steps.t
 
 ## Getting started
 
-Requires Node.js 20 or newer and a webcam.
+Requires Node.js 20.19 or newer and a webcam.
 
 ```bash
 git clone https://github.com/demi43/conversation-bridge.git
@@ -79,6 +79,9 @@ npm run dev
 ```
 
 Open the URL Vite prints (usually http://localhost:5173) and allow camera access.
+
+`npm run dev` starts both the HTTPS Vite frontend and the API backend. Vite
+proxies `/api` requests to the backend at `http://127.0.0.1:3001`.
 
 The hand-tracking model lives in `public/models/hand_landmarker.task`. If it's missing, download it:
 
@@ -197,6 +200,47 @@ After you press **Done** on a sentence, the app sends **only the sign words** (f
 
 The model is `gemini-3.5-flash-lite` by default; set `GEMINI_MODEL=...` in `.env` to try another. The instructions to Gemini ([`server/translate.ts`](server/translate.ts)) keep it literal: no added meaning, alternatives when unsure, and a warning when the signs don't clearly form a sentence. Nothing is spoken until you press **Approve**.
 
+## Backend API
+
+Copy `.env.example` to `.env` and add the service credentials you intend to use:
+
+```bash
+cp .env.example .env
+```
+
+The standalone TypeScript backend provides:
+
+| Route | Purpose |
+| --- | --- |
+| `GET /api/health` | Reports which external services are configured, without exposing secrets |
+| `POST /api/translate` | Turns a validated list of sign glosses into literal English with Gemini |
+| `POST /api/elevenlabs/speech` | Streams MP3 speech for signer-approved text |
+| `GET /api/elevenlabs/scribe-token` | Creates a 15-minute, single-use realtime Scribe token |
+
+Example speech request:
+
+```bash
+curl -X POST http://127.0.0.1:3001/api/elevenlabs/speech \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Can I have a coffee, please?"}' \
+  --output speech.mp3
+```
+
+The permanent Gemini and ElevenLabs keys stay in the backend. The speech route
+accepts at most 2,000 characters, API JSON bodies are size-limited, upstream
+requests time out, and service errors are not passed through to the browser.
+
+For a production build:
+
+```bash
+npm run build
+npm start
+```
+
+The production backend serves the compiled frontend and all API routes from one
+origin. `npm test` runs backend route tests with mocked external services, so it
+does not consume Gemini or ElevenLabs credits.
+
 ## Machine learning setup (for the model work)
 
 The model work runs in Python 3.11, separate from the web app. Python 3.14 is too new for TensorFlow and LiteRT.
@@ -293,7 +337,7 @@ steps.txt                            Step-by-step build log
 - **Signs → English:** Gemini API (`@google/genai`, `gemini-3.5-flash-lite`), called from the dev server
 - **Speech-to-text:** ElevenLabs Realtime Speech-to-Text API (planned)
 - **Text-to-speech:** ElevenLabs Text-to-Speech API (planned)
-- **Backend:** a small API service to keep API keys secret and issue temporary speech-to-text tokens (planned)
+- **Backend:** standalone Node.js API server for Gemini translation, streamed ElevenLabs speech and temporary speech-to-text tokens
 
 MediaPipe provides tracking building blocks; it does not provide ASL translation. Recognition comes from the separate Kaggle model.
 
