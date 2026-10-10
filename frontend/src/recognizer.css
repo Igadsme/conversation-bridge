@@ -80,6 +80,15 @@
   opacity: 0.75;
 }
 
+/* STABILIZATION - transient note under the status line (ignored repeats) */
+.recognizer-note {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.2rem;
+  margin: 4px 0 0;
+}
+
 .recognizer-history {
   text-align: center;
   font-size: 1.3rem;

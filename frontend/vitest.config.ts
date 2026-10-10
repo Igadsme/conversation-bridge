@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // macOS writes ._name sidecars on external drives; they are
+    // not tests and break the parser
+    exclude: ["**/._*", "**/node_modules/**"],
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

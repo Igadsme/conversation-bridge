@@ -23,6 +23,15 @@ export const Route = createFileRoute("/captions")({
 
 const SIZES = { S: "text-2xl", M: "text-3xl", L: "text-4xl" } as const;
 
+// Turn Scribe SDK errors into something the signer can act on
+function friendlyError(error: Error | Event): string {
+  const message = error instanceof Error ? error.message : String(error)
+  if (/permission|NotAllowedError|denied|blocked/i.test(message)) {
+    return "Microphone access is blocked. Allow it in the address bar (site settings), then try again."
+  }
+  return message
+}
+
 function Captions() {
   const [on, setOn] = useState(false);
   const [partial, setPartial] = useState("");
@@ -38,8 +47,7 @@ function Captions() {
       setPartial("");
       setLines((current) => [...current, clean]);
     },
-    onError: (scribeError) =>
-      setError(scribeError instanceof Error ? scribeError.message : "Live captions disconnected"),
+    onError: (scribeError) => setError(friendlyError(scribeError)),
   });
 
   useEffect(() => () => scribe.disconnect(), []);
@@ -62,7 +70,7 @@ function Captions() {
       });
       setOn(true);
     } catch (scribeError) {
-      setError(scribeError instanceof Error ? scribeError.message : "Could not start live captions");
+      setError(friendlyError(scribeError instanceof Error ? scribeError : new Error(String(scribeError))));
     }
   }
 

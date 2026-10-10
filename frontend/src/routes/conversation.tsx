@@ -27,6 +27,15 @@ export const Route = createFileRoute("/conversation")({
 type Msg = { id: number; who: "you" | "them"; text: string; at: number; typed?: boolean | undefined };
 const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
+// Turn Scribe SDK errors into something the signer can act on
+function friendlyError(error: Error | Event): string {
+  const message = error instanceof Error ? error.message : String(error)
+  if (/permission|NotAllowedError|denied|blocked/i.test(message)) {
+    return "Microphone access is blocked. Allow it in the address bar (site settings), then try again."
+  }
+  return message
+}
+
 function Conversation() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   // "chat" = message list with the two mode buttons; "sign" = the real
@@ -95,7 +104,7 @@ function Conversation() {
       });
       setBusy("listen");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not start live captions");
+      setError(friendlyError(reason instanceof Error ? reason : new Error(String(reason))));
     }
   }
 

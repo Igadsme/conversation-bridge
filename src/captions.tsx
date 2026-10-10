@@ -14,6 +14,15 @@ export default function Captions({ compact = false, onCommitted }: Props) {
   const callbackRef = useRef(onCommitted)
   callbackRef.current = onCommitted
 
+  // Turn Scribe SDK errors into something the signer can act on
+  function friendlyError(error: Error | Event): string {
+    const message = error instanceof Error ? error.message : String(error)
+    if (/permission|NotAllowedError|denied|blocked/i.test(message)) {
+      return 'Microphone access is blocked. Allow it in the address bar (site settings), then try again.'
+    }
+    return message
+  }
+
   const scribe = useScribe({
     modelId: 'scribe_v2_realtime',
     onCommittedTranscript: ({ text }) => {
@@ -22,7 +31,7 @@ export default function Captions({ compact = false, onCommitted }: Props) {
       setLines((current) => [...current, clean])
       callbackRef.current?.(clean)
     },
-    onError: (error) => setLocalError(error instanceof Error ? error.message : 'Live captions disconnected'),
+    onError: (error) => setLocalError(friendlyError(error)),
   })
 
   useEffect(() => () => scribe.disconnect(), [])
@@ -40,7 +49,7 @@ export default function Captions({ compact = false, onCommitted }: Props) {
         microphone: { echoCancellation: true, noiseSuppression: true },
       })
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Could not start live captions')
+      setLocalError(friendlyError(error instanceof Error ? error : new Error(String(error))))
     }
   }
 

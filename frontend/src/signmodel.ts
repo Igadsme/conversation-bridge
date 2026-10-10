@@ -61,6 +61,22 @@ export function softmax(scores: ArrayLike<number>): Float32Array {
 // Shared across callers: React runs effects twice in dev, and LiteRT can only be loaded once
 let loading: Promise<SignModel> | null = null
 
+// loadLiteRt() throws "LiteRT is already loading / loaded" when called
+// twice, so keep the runtime's promise here: when a retry happens after
+// a failed model-file load (for example the .tflite was missing), the
+// already-initialized runtime is reused instead of erroring.
+let liteRt: Promise<unknown> | null = null
+function ensureLiteRt(): Promise<unknown> {
+  const ready: Promise<unknown> =
+    liteRt ??
+    loadLiteRt(LITERT_WASM_URL).catch((err) => {
+      liteRt = null // allow a retry if the runtime itself failed to load
+      throw err
+    })
+  liteRt = ready
+  return ready
+}
+
 export class SignModel {
   private readonly modelBytes: Uint8Array
   private readonly labels: string[] // index -> sign name
@@ -80,7 +96,7 @@ export class SignModel {
 
   private static async loadFiles(): Promise<SignModel> {
     const [, modelResponse, labelsResponse] = await Promise.all([
-      loadLiteRt(LITERT_WASM_URL),
+      ensureLiteRt(),
       fetch(MODEL_URL),
       fetch(LABELS_URL),
     ])

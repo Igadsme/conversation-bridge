@@ -53,3 +53,4 @@ data/personal/
 
 # Personal calibration model, copied by scripts/setup_model.sh (personal data)
 public/models/personal_model.json
+model-backups/
