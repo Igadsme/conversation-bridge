@@ -57,7 +57,120 @@ Fix: File name casing
 - Changed the import to ./cameraview.css, checked the build, committed and
   pushed: "Fix CSS import casing to match file name"
 
+Step 4: Sign recorder
+---------------------
+- src/signs.ts: the 20-sign starter vocabulary and the data types for a
+  recording (Point, HandFrame, Frame, SignExample).
+- src/cameraview.tsx: added an onFrame prop so other components receive the
+  hand data every frame (read through a ref so the camera never restarts).
+- src/recorder.tsx + recorder.css: pick a sign, press Space, 3-2-1 countdown,
+  records 2 seconds of hand points. Clips where hands were missing in over
+  half the frames are rejected. Undo last, and Download all as JSON.
+- src/App.tsx now shows <Recorder />.
+- Only landmark points are saved, never video.
+- Save downloaded files into data/recordings/ and commit them.
+- Renamed src/sign.ts to src/signs.ts so it matches the imports.
+- Added "STEP N" header comments to every source file so it's clear which
+  step added what.
+- Checked: npm run build and npm run lint both pass.
+
+Recording tips:
+- Start and end each clip with hands down (helps segmentation later).
+- Vary distance, speed and lighting across the 5-10 examples per sign.
+- Download often - a page refresh loses anything not downloaded.
+- Check each sign against Lifeprint/SigningSavvy or an ASL-fluent signer.
+
+Research: Can we use existing data instead of recording our own?
+----------------------------------------------------------------
+1. Kaggle "asl-signs" (Google Isolated Sign Language Recognition / PopSign)
+   - 250 signs from 47 Deaf adult signers, recorded on phone selfie cameras.
+   - Already MediaPipe landmarks (same 21 points per hand), not video.
+   - Vocabulary comes from a kids' game, so not all 20 of our signs are in it.
+   - PopSign ASL is CC-BY 4.0; confirm the Kaggle copy's terms before use.
+   - BEST FIT: closest to plug-and-play.
+2. Microsoft ASL Citizen
+   - ~84,000 videos of ~2,700 signs (42.8 GB download).
+   - Raw video: we'd have to run MediaPipe over every clip ourselves.
+   - Non-commercial research license only.
+3. Pretrained models
+   - Nothing drops into a browser for our exact vocabulary.
+
+Decision: mix both.
+- Use Kaggle landmark examples for signs that are in its 250-word list.
+- Record our own 5-10 examples for the rest (and a few for every sign, on our
+  own camera, so the data looks like the live demo).
+- Fingerspelling stays the fallback for anything missing.
+- Pitch bonus: the core data comes from Deaf signers.
+
+Option researched: Reuse a winning Kaggle model (NOT STARTED - for Gad to review)
+-------------------------------------------------------------------------------
+Idea: skip training. Use a model already trained on the Kaggle "asl-signs"
+competition (250 signs, Deaf signers) and only keep the outputs for our signs.
+
+What we found:
+- 1st place solution: github.com/hoyso48/Google---Isolated-Sign-Language-Recognition-1st-place-solution
+  MIT license. Contains the TRAINING NOTEBOOK ONLY - no trained weights.
+- Every competition entry is a .tflite file with the same interface:
+    input  "inputs":  float32 [frames, 543, 3]  (x, y, z per landmark, NaN = missing)
+    output "outputs": float32 [250]             (one score per sign)
+  So any trained competition model plugs into the same code.
+- 543 landmarks, in this order (MediaPipe Holistic):
+    face 0-467 | left hand 468-488 | pose 489-521 | right hand 522-542
+- Signs the model knows are listed in sign_to_prediction_index_map.json.
+
+Steps (after "pip install kaggle"):
+1. API token: kaggle.com -> Settings -> API -> Create New Token.
+     mkdir -p ~/.kaggle && mv ~/Downloads/kaggle.json ~/.kaggle/
+     chmod 600 ~/.kaggle/kaggle.json
+2. Open the "Google - Isolated Sign Language Recognition" competition page
+   on kaggle.com and accept the rules (downloads fail until you do).
+3. Download the sign list and check which of our 20 signs it has:
+     mkdir -p kaggle && cd kaggle
+     kaggle competitions download -c asl-signs -f sign_to_prediction_index_map.json
+     kaggle competitions download -c asl-signs -f train.csv
+   (unzip if they arrive zipped). Likely missing: COFFEE, TEA, SMALL, MEDIUM,
+   LARGE, SUGAR - decide whether to change vocabulary or fingerspell those.
+4. Get a trained model.tflite. Two ways:
+   a) FASTER: on Kaggle, open the competition's Code tab, find a public
+      notebook whose Output includes model.tflite (search "tflite", sort by
+      score). Check its license, then download:
+        kaggle kernels output <owner>/<notebook-name> -p models/
+   b) SLOWER: run the 1st place notebook yourself on a Kaggle TPU. Takes
+      hours, needs older TensorFlow + tensorflow-addons. Exports model.tflite.
+5. Check the model in Python before touching the browser:
+   - pip install tensorflow pandas pyarrow
+   - Load one example parquet from train.csv, reshape to [frames, 543, 3].
+   - tf.lite.Interpreter(model_path=...).get_signature_runner("serving_default")
+   - Confirm the top prediction matches the example's label for a few signs.
+6. Switch tracking in the browser from HandLandmarker to HolisticLandmarker
+   (same @mediapipe/tasks-vision package, model: holistic_landmarker.task).
+   - Build each frame as 543 x 3 in the order above; missing parts = NaN.
+   - CHECK: the new face model returns 478 points (468 + 10 iris). Drop
+     the iris points so the face is 468 like the training data.
+   - CHECK: mirroring. Try feeding mirrored and unmirrored frames and see
+     which one gets known signs right.
+   - Holistic is heavier than hands-only; check the frame rate stays smooth.
+7. Run model.tflite in the browser with LiteRT.js (npm: @litertjs/core),
+   loadAndCompile with 'wasm' or 'webgpu'. If it rejects the variable
+   frame count, pad/crop clips to a fixed length.
+8. Cut live signing into clips: collect frames while hands are visible,
+   send the clip to the model when the hands drop.
+9. Keep only our signs: take the 250 scores, keep the ones in our vocabulary
+   (indexes from the JSON map), re-normalize, show the top 3. Below a
+   confidence threshold, show "not sure" and offer fingerspelling.
+10. Test live with several people and lighting; expect lower accuracy than
+    the Kaggle leaderboard (different camera, angle, signers).
+
+Pros: no training data to collect; trained on Deaf signers; strong model.
+Cons: no ready weights from the 1st place repo; Holistic is slower; risk
+in steps 6-7 (exact input format must match). Our step 4 recorder is still
+useful for collecting TEST clips.
+
+Simpler alternative still on the table: Kaggle landmarks + template matching
+(no model at all) - see the dataset research section above.
+
 NEXT UP
 -------
-Step 4: Record examples of each starter sign (5 to 10 each, ideally from an
-ASL-fluent signer) as hand-landmark sequences - the start of recognition.
+Step 5: The matcher - compare live signing against recorded examples and show
+the top 3 guesses with confidence. Optionally bootstrap with public landmark
+data (Kaggle "asl-signs" / PopSign) for signs that are in its 250-word list.

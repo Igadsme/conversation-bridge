@@ -23,5 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
-.env.example
+# API keys: ignore every .env file except the example template
+.env*
+!.env.example
+
+# Kaggle competition data (do not commit - license + size)
+kaggle/

@@ -1,3 +1,6 @@
+/* STEP 2 - Camera layout: video and canvas stacked in the same box,
+   mirrored together so the overlay lines up with the hands. */
+
 .camera {
   position: relative;
   width: 100%;

@@ -1,16 +1,38 @@
+// CameraView - webcam feed with hand tracking drawn on top.
+// STEP 2: <video> shows the webcam, a <canvas> sits on top (both mirrored in CSS).
+// STEP 3: MediaPipe HandLandmarker finds up to 2 hands each frame and draws them.
+// STEP 4: onFrame passes each frame's hand data out (used by the recorder).
+
 import { useEffect, useRef, useState } from 'react'
-import { DrawingUtils, FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision'
+import {
+  DrawingUtils,
+  FilesetResolver,
+  HandLandmarker,
+  type HandLandmarkerResult,
+} from '@mediapipe/tasks-vision'
 import './cameraview.css'
 
 // Keep this version in sync with @mediapipe/tasks-vision in package.json
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm'
 const MODEL_URL = '/models/hand_landmarker.task'
 
-export default function CameraView() {
+type Props = {
+  // STEP 4: called with the hand-tracking result for every new video frame
+  onFrame?: (result: HandLandmarkerResult) => void
+}
+
+export default function CameraView({ onFrame }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState('Starting camera…')
   const [error, setError] = useState<string | null>(null)
+
+  // STEP 4: the loop below starts once, so it reads onFrame through this ref
+  // to always call the latest version without restarting the camera
+  const onFrameRef = useRef(onFrame)
+  useEffect(() => {
+    onFrameRef.current = onFrame
+  })
 
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -67,6 +89,7 @@ export default function CameraView() {
           if (video.currentTime !== lastVideoTime) {
             lastVideoTime = video.currentTime
             const result = landmarker.detectForVideo(video, performance.now())
+            onFrameRef.current?.(result) // STEP 4: hand the data to whoever is listening
 
             ctx.clearRect(0, 0, canvas.width, canvas.height)
             for (const hand of result.landmarks) {

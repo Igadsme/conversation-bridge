@@ -1,0 +1,27 @@
+/* STEP 4 - Styles for the sign recorder (banner + controls) */
+
+/* Big status line: countdown, recording, or the last result */
+.recorder-banner {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  min-height: 2.5rem;
+}
+
+.recorder-banner.countdown { color: #e6a700; }
+.recorder-banner.recording { color: crimson; }
+
+.recorder-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.recorder-controls select,
+.recorder-controls button {
+  font-size: 1.1rem;
+  padding: 8px 14px;
+}
