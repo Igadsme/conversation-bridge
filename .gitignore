@@ -27,5 +27,8 @@ dist-ssr
 .env*
 !.env.example
 
-# Kaggle competition data (do not commit - license + size)
+
+
+# Kaggle competition data (don't commit - license + size)
 kaggle/
+
