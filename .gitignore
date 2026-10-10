@@ -43,3 +43,11 @@ asl-citizen/
 # ASL Citizen model + labels, copied by scripts/setup_model.sh (license: no redistribution)
 public/models/asl_citizen.onnx
 public/models/asl_citizen_labels.json
+# Python cache files
+__pycache__/
+
+# Personal calibration recordings (your own body movement data - keep private)
+data/personal/
+
+# Personal calibration model, copied by scripts/setup_model.sh (personal data)
+public/models/personal_model.json

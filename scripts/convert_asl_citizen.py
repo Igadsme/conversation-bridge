@@ -4,6 +4,11 @@
 # weights, switches from float64 to float32 (better supported in the browser),
 # exports asl-citizen/asl_citizen.onnx and checks ONNX gives the same scores as PyTorch.
 #
+# The ONNX model has two outputs:
+#   outputs  [1, 2731]  scores for each ASL Citizen sign
+#   features [1, 256]   the encoder's description of the clip (input to the last
+#                       layer) - used by the personal calibration classifier
+#
 # Needs (see README): asl-citizen/code (their repo), asl-citizen/weights/*.pt,
 # asl-citizen/labels.json. Run from the project root in the asl-ml env:
 #   python scripts/convert_asl_citizen.py
@@ -42,10 +47,22 @@ model = Network(encoder=stgcn, decoder=fc)
 model.load_state_dict(torch.load(WEIGHTS, map_location='cpu'))
 model = model.float().eval()
 
+
+class WithFeatures(torch.nn.Module):
+    # Same model, but also returns the encoder's 256 numbers
+    def __init__(self, network):
+        super().__init__()
+        self.network = network
+
+    def forward(self, x):
+        features = self.network.encoder(x)
+        return self.network.decoder(features), features
+
+
 # Input: one clip of x/y for 27 points over 128 frames -> [1, 2, 128, 27]
 example = torch.randn(1, 2, MAX_FRAMES, NUM_POINTS)
-torch.onnx.export(model, example, OUT, input_names=['inputs'], output_names=['outputs'],
-                  opset_version=17, dynamo=False)
+torch.onnx.export(WithFeatures(model).eval(), example, OUT, input_names=['inputs'],
+                  output_names=['outputs', 'features'], opset_version=17, dynamo=False)
 print(f'Exported {OUT} ({OUT.stat().st_size / 1e6:.1f} MB), {len(labels)} signs')
 
 # Same scores from PyTorch and ONNX?
@@ -55,7 +72,7 @@ for _ in range(5):
     x = torch.randn(1, 2, MAX_FRAMES, NUM_POINTS)
     with torch.no_grad():
         expected = model(x).numpy()
-    got = session.run(None, {'inputs': x.numpy()})[0]
+    got = session.run(['outputs'], {'inputs': x.numpy()})[0]
     worst = max(worst, float(np.abs(expected - got).max()))
     assert expected.argmax() == got.argmax()
 print(f'ONNX matches PyTorch: largest score difference {worst:.6f}, same top sign every time')

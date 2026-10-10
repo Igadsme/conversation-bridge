@@ -25,3 +25,27 @@
   font-size: 1.1rem;
   padding: 8px 14px;
 }
+
+/* PERSONAL CALIBRATION 1 - overall progress under the controls */
+.recorder-progress {
+  text-align: center;
+  opacity: 0.75;
+  margin-top: 12px;
+}
+
+/* CUSTOM SIGNS - add your own word or phrase */
+.recorder-custom {
+  margin-top: 12px;
+}
+
+.recorder-custom input {
+  font-size: 1.1rem;
+  padding: 8px 10px;
+  min-width: 16rem;
+}
+
+/* The label it will be saved as, e.g. HELLO-HOW-ARE-YOU */
+.recorder-preview {
+  font-weight: 700;
+  opacity: 0.8;
+}

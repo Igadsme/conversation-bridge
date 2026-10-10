@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^2.28.0",
     "@litertjs/core": "^2.5.3",
     "@mediapipe/tasks-vision": "^1.1.0",
     "onnxruntime-web": "^1.30.0",

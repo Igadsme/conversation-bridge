@@ -44,8 +44,8 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 | 3 | Hand tracking with MediaPipe HandLandmarker (2 hands) | Done |
 | 4 | Sign recorder: capture landmark examples per sign, download as JSON | Built |
 | 5 | Sign recognition: reuse the 1st-place Kaggle model, show top 3 guesses | In progress |
-| 6 | Gemini: turn recognized signs into a literal English sentence | Planned |
-| 7 | Confirm screen + ElevenLabs text-to-speech with voice picker | Planned |
+| 6 | Sentence builder, then Gemini turns the signs into a literal English sentence | Built (needs Gemini key) |
+| 7 | Confirm screen (built) + ElevenLabs text-to-speech with voice picker | In progress |
 | 8 | ElevenLabs realtime speech-to-text captions | Planned |
 | 9 | Fingerspelling fallback and repair (start over, wait) | Planned |
 
@@ -62,6 +62,7 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 - [x] "Compare with" switch: top 3 from all 250 signs (default) or only our vocabulary
 - [x] ASL Citizen added in the browser: model files, `onnxruntime-web`, name mapping, [`src/aslcitizenmodel.ts`](src/aslcitizenmodel.ts) (matches Python on test clips)
 - [x] Model switch on the Recognize page: Both (default), Kaggle or ASL Citizen; tested end to end with ASL Citizen test videos as a fake webcam
+- [x] Sentence builder: recognized signs collect as chips you can swap, remove or add to, then Done ([`src/sentencebuilder.tsx`](src/sentencebuilder.tsx))
 - [ ] Test live on our own signing; tune thresholds; confirm mirroring
 
 A detailed log of each step, with the commands used, is in [`steps.txt`](steps.txt).
@@ -87,16 +88,26 @@ curl -L -o public/models/hand_landmarker.task \
   https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
 ```
 
-### Recording sign examples
+### Recording your own signing (personal calibration)
 
-The app currently opens on the sign recorder. With the Kaggle model, recordings are used for **testing** on our own camera, and for any sign the model doesn't know.
+The **Record** mode records the demo signer's own examples, used to train a small personal model on top of ASL Citizen so recognition is more accurate for that signer.
 
-1. Pick a sign from the dropdown and press **Space**.
-2. Hold your hands down during the 3-2-1 countdown, sign once during the 2-second recording, then lower your hands.
-3. Record 5 to 10 varied examples per sign (distance, speed, lighting).
-4. Click **Download** and save the file into `data/recordings/`.
+1. Pick a sign from the dropdown and press **Space** (or **Start**).
+2. Sign it, then lower your hands out of view. Repeat. Each sign is saved automatically, up to 15.
+3. Also record **NOT-A-SIGN**: everyday movements like scratching your head or waving, so the model learns when to say "not sure".
+4. Click **Download** after each sign and save the file into `data/personal/`.
 
-Only hand landmark points are saved, never video. Get permission before recording anyone else.
+**Your own words and phrases:** type one into **Add your own word or phrase**, for example `hello how are you`, and it becomes a label (`HELLO-HOW-ARE-YOU`) in the dropdown, remembered in this browser. Sign a phrase in one go, without lowering your hands in the middle, so each one is saved as a single clip. After training, the personal model recognizes it as one unit, and Gemini translates it as the phrase ("Hello, how are you?").
+
+Clips are cut exactly the way the Recognize page cuts them, so the training data matches what the app sees live. Record in demo conditions (same laptop, camera height, distance and lighting), and have an ASL-fluent person check your signs first.
+
+Only body and hand points are saved, never video. `data/personal/` is git-ignored because it's personal data. Get permission before recording anyone else.
+
+**Training:** `python scripts/train_personal.py` (in the `asl-ml` env) reads every file in `data/personal/`, runs each clip through ASL Citizen to get its 256-number description, and trains a small classifier on those for your signs. On a first batch of 8 signs (15 clips each), clips held back from training were recognized 100% of the time, against 73% for ASL Citizen alone among the same 8 signs. With 12 labels (11 signs plus the phrase HELLO-HOW-ARE-YOU, 181 clips) it was 99%, against 65% for ASL Citizen. Those test clips come from the same recording sessions, so record in demo conditions. The result is saved to `data/personal/personal_model.json`.
+
+**In the app:** run `sh scripts/setup_model.sh` to copy the trained model into `public/models/` (git-ignored), then pick **Personal** or **Combined** on the Recognize page. Personal reuses ASL Citizen's description of each clip, so it adds no noticeable time. In **Combined**, the personal answer is shown when it's at least 70% sure; otherwise the app falls back to Kaggle and ASL Citizen, so signs you haven't recorded still work. Until **NOT-A-SIGN** is recorded, the personal model always picks one of the recorded signs, which is why it needs to be that sure.
+
+After recording more signs: `python scripts/train_personal.py`, then `sh scripts/setup_model.sh`, then refresh the page.
 
 ## Sign recognition model
 
@@ -157,7 +168,9 @@ Then pull the sign lists out of the dataset zip without downloading all 42.8 GB 
 
 **In the browser:** `sh scripts/setup_model.sh` copies `asl_citizen.onnx` and its sign list into `public/models/`, and [`src/aslcitizenmodel.ts`](src/aslcitizenmodel.ts) runs it with ONNX Runtime Web. Its preprocessing is a line-by-line port of Microsoft's code and gives the same top 3 as Python on their test clips, at about 150 ms per sign.
 
-**How the two models work together:** on the Recognize page, **Both** runs each sign through both models and shows the more confident answer. In testing, Kaggle got HELLO and ASL Citizen got COFFEE, and each missed the other's sign, so together they cover more of the vocabulary than either alone.
+**How the two models work together:** on the Recognize page, **Both** runs each sign through both models. The main answer comes from Kaggle when its top guess is one of our signs it knows (it's more accurate on those, e.g. HELLO), and from ASL Citizen otherwise (e.g. COFFEE, LARGE). Their percentages aren't compared directly, because one model chooses from 250 signs and the other from 2,731.
+
+ASL Citizen also gets each clip with about 0.67 seconds of resting frames before and after the sign, because it was trained on whole recordings. On 40 test videos this raised its accuracy on our signs from 32/40 to 38/40. In an end-to-end test with Microsoft's test videos as a fake webcam, the app recognized COFFEE, HELLO and LARGE correctly every time.
 
 ## Vocabulary
 
@@ -170,6 +183,19 @@ The starter vocabulary (coffee counter) is in [`src/signs.ts`](src/signs.ts). Th
 **Open decision:** keep the coffee counter (record or fingerspell the 11 missing signs), or switch to a snack or ice-cream counter that uses only signs the model already knows, for example:
 
 > HELLO, BYE, PLEASE, THANK-YOU, ICECREAM, CHOCOLATE, DRINK, WATER, MILK, SNACK, FOOD, PIZZA, FRENCHFRIES, APPLE, ORANGE, CEREAL, NUTS, GUM, HAVE, LIKE, GIVE, ANOTHER, NAPKIN, HOT, NOT, HUNGRY, THIRSTY, WAIT, YES, NO, SAME, FINISH
+
+## Gemini setup (signs to English)
+
+After you press **Done** on a sentence, the app sends **only the sign words** (for example `COFFEE HOT LARGE PLEASE`) to Gemini and shows the English for you to approve. The API key stays on the dev server and never reaches the browser.
+
+1. Get a key at [aistudio.google.com](https://aistudio.google.com) → **Get API key**.
+2. Create a file called `.env` in the project folder (it's git-ignored):
+   ```
+   GEMINI_API_KEY=your-key-here
+   ```
+3. Restart `npm run dev`.
+
+The model is `gemini-3.5-flash-lite` by default; set `GEMINI_MODEL=...` in `.env` to try another. The instructions to Gemini ([`server/translate.ts`](server/translate.ts)) keep it literal: no added meaning, alternatives when unsure, and a warning when the signs don't clearly form a sentence. Nothing is spoken until you press **Approve**.
 
 ## Machine learning setup (for the model work)
 
@@ -226,16 +252,22 @@ public/models/hand_landmarker.task   MediaPipe hand-only model (steps 3-5, no lo
 src/App.tsx                          App entry page
 src/cameraview.tsx / .css            Webcam + holistic tracking overlay (steps 2-6)
 src/landmarks.ts                     Converts tracking into the model's 543-point frame (step 6)
-src/recorder.tsx / .css              Sign example recorder (step 4)
+src/recorder.tsx / .css              Records the signer's own examples (personal calibration)
 src/signmodel.ts                     Runs the Kaggle model in the browser (step 7)
 src/aslcitizenmodel.ts               Runs the ASL Citizen model in the browser (Phase B)
+src/personalmodel.ts                 Runs the personal calibration classifier
+scripts/train_personal.py            Trains the personal classifier on data/personal/
 src/segmenter.ts                     Cuts live video into one clip per sign (step 8)
 src/recognizer.tsx / .css            Live recognition page, top 3 guesses (step 8)
+src/sentencebuilder.tsx / .css       Builds a sentence from recognized signs before translation
+src/translationpanel.tsx             Shows Gemini's English options; the signer approves one
+src/translate.ts                     Browser side of /api/translate
+server/translate.ts                  Calls Gemini on the dev server (keeps the key secret)
 src/signs.ts                         Vocabulary and recording data types
 scripts/check_model.py               Tests the Kaggle model on real examples (step 5)
 scripts/setup_model.sh               Copies the model into public/models/ (step 7)
 data-training/                       1st-place training notebook, for reference
-data/recordings/                     Our recorded sign examples (JSON)
+data/personal/                       Personal calibration recordings (git-ignored)
 kaggle/                              Kaggle data and model (git-ignored, download it yourself)
 asl-citizen/                         ASL Citizen weights, code, sign list, ONNX model (git-ignored)
 scripts/convert_asl_citizen.py       Converts ASL Citizen to ONNX
@@ -258,7 +290,7 @@ steps.txt                            Step-by-step build log
 - **Sign recognition:** 1st-place Kaggle model (TensorFlow Lite), run in the browser with [LiteRT.js](https://developers.google.com/edge/litert/web) (`@litertjs/core` 2.5.3, WASM)
 - **Second sign model:** ASL Citizen (ONNX), run in the browser with [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) (`onnxruntime-web` 1.30.0, WASM)
 - **Model testing:** Python 3.11, ai-edge-litert, pandas, PyTorch, ONNX Runtime, MediaPipe
-- **Signs → English:** Gemini API (planned)
+- **Signs → English:** Gemini API (`@google/genai`, `gemini-3.5-flash-lite`), called from the dev server
 - **Speech-to-text:** ElevenLabs Realtime Speech-to-Text API (planned)
 - **Text-to-speech:** ElevenLabs Text-to-Speech API (planned)
 - **Backend:** a small API service to keep API keys secret and issue temporary speech-to-text tokens (planned)

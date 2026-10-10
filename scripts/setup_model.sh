@@ -20,5 +20,11 @@ cp asl-citizen/asl_citizen.onnx public/models/asl_citizen.onnx
 cp asl-citizen/labels.json public/models/asl_citizen_labels.json
 
 
+# Personal calibration model, if it has been trained (python scripts/train_personal.py)
+if [ -f data/personal/personal_model.json ]; then
+  cp data/personal/personal_model.json public/models/personal_model.json
+  echo "Copied personal model"
+fi
+
 echo "Copied sign model and labels into public/models/"
 ls -la public/models/sign_model.tflite public/models/sign_labels.json public/models/asl_citizen.onnx public/models/asl_citizen_labels.json

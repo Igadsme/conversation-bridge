@@ -29,13 +29,30 @@
   padding: 0;
 }
 
-.recognizer-result li {
+/* Each guess is a button (SENTENCE A: tap to add it to the sentence) */
+.recognizer-guess {
   display: grid;
   grid-template-columns: 8rem 1fr 3rem;
   gap: 12px;
   align-items: center;
+  width: 100%;
+  font: inherit;
   font-size: 1.2rem;
-  padding: 4px 0;
+  padding: 4px 6px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.recognizer-guess:hover:not(:disabled) {
+  background: rgba(0, 163, 184, 0.12);
+}
+
+.recognizer-guess:disabled {
+  cursor: default;
 }
 
 .recognizer-sign { font-weight: 600; }

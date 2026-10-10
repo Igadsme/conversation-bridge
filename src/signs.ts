@@ -36,22 +36,28 @@ export const ASL_CITIZEN_NAMES: Record<string, string[]> = {
   HELP: ['HELP'],
 }
 
-
-// One landmark: x and y are 0–1 fractions of the image, z is relative depth
-export type Point = [number, number, number]
-
-export type HandFrame = {
-  handedness: string // "Left" or "Right" as MediaPipe reports it
-  points: Point[] // 21 landmarks
+// CUSTOM SIGNS - turn what the signer types into a label the whole app accepts:
+// "hello how are you" -> "HELLO-HOW-ARE-YOU". Must start with a letter, use only
+// A-Z, 0-9 and dashes, max 30 characters (server/translate.ts checks the same rule).
+// Returns null if nothing usable is left.
+export function toSignName(text: string): string | null {
+  const name = text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return /^[A-Z][A-Z0-9-]{0,29}$/.test(name) ? name : null
 }
 
-export type Frame = {
-  t: number // milliseconds since recording started
-  hands: HandFrame[] // empty when no hands were seen
-}
+// PERSONAL CALIBRATION - extra label for clips that aren't any sign (scratching
+// your head, waving...), so the personal model learns to say "not sure"
+export const NOT_A_SIGN = 'NOT-A-SIGN'
 
-export type SignExample = {
-  sign: string
+// One recorded clip of the signer, cut by the same Segmenter as the Recognize page
+// (so training data matches what the app sees live), resting frames included.
+// Each frame keeps x/y of the body and hands only - what ASL Citizen uses -
+// to keep files small: 150 numbers per frame, in this order:
+//   pose 0-32 | left hand 33-53 | right hand 54-74   (x, y for each; null = not seen)
+export type PersonalClip = {
+  sign: string // one of VOCABULARY, or NOT_A_SIGN
   recordedAt: string
-  frames: Frame[]
+  start: number // frame where the sign itself starts (frames before are resting)
+  end: number // frame where the sign itself ends (exclusive)
+  frames: (number | null)[][]
 }

@@ -179,6 +179,8 @@ export class AslCitizenModel {
       bestOverall: all[0],
       frames: clip.length,
       ms: Math.round(performance.now() - t0),
+      // Its 256-number description of the clip, for the personal classifier
+      features: Float32Array.from(results.features.data as Float32Array),
     }
   }
 }

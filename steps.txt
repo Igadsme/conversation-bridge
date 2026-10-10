@@ -326,8 +326,101 @@ Findings / ideas to try after live testing:
   our segmenter cuts those off. Try keeping ~10 frames before/after each
   clip for ASL Citizen.
 
+Fix (done): ASL Citizen said NONSENSE / ROAR for HELLO
+- Cause 1: the segmenter cut clips tightly (hands visible only). ASL
+  Citizen was trained on whole recordings incl. resting hands before and
+  after. Measured on 40 test videos (our 20 signs / all 2,731):
+    whole video 38/40 / 20/40 | app's tight clip 32/40 / 14/40
+    +20 frames each side 38/40 / 21/40 (HELLO: NONSENSE -> HELLO)
+  src/segmenter.ts now returns { clip, padded }: padded = clip with
+  PAD_FRAMES (20, ~0.67 s) before and after. Kaggle uses clip, ASL Citizen
+  uses padded. A result now arrives ~0.67 s after the hands drop.
+- Cause 2: in Both, the big answer went to whichever model was more
+  confident, so NONSENSE (ASL Citizen 94%) beat HELLO (Kaggle 92%). The two
+  models' percentages aren't comparable (250 vs 2,731 signs). mainAnswer()
+  now uses Kaggle when its top guess is one of our signs it knows, otherwise
+  ASL Citizen.
+- Tested end to end (fake webcam, COFFEE / HELLO / BIG videos, real app):
+    Our vocabulary: COFFEE HELLO LARGE every time, no errors.
+    All signs: same, except the very first clip of the video (no resting
+    frames before it yet). ASL Citizen alone now: COFFEE 98-100%,
+    LARGE 94-100%; HELLO still 2nd behind NONSENSE (Kaggle covers HELLO).
+
 NEXT for ASL Citizen: B10 - live test on our own signing, pick Kaggle /
 ASL Citizen / Both, and MEDIUM -> MIDDLE or REGULAR.
+
+PERSONAL CALIBRATION - train on Ola's own signing for the demo
+---------------------------------------------------------------
+Plan: keep ASL Citizen as a feature extractor (its encoder turns a clip into
+256 numbers) and train only a small classifier on our own recordings.
+10-15 examples per sign is enough for that; training a model from scratch
+on one person's data would overfit.
+  1. Record (this step)  2. Train in Python  3. "Personal" model in the app
+
+1 (done). New recorder (Record mode), replaces the step 4 recorder:
+- Same Segmenter as the Recognize page (hands up -> sign -> hands down),
+  same 20 resting frames before/after, so training data = live data.
+- Pick a sign, press Space, sign it again and again; each sign saves
+  automatically; stops at 15. Labels: our 20 signs + NOT-A-SIGN
+  (scratching your head, waving...) so it learns to say "not sure".
+- Undo last <sign>, Download (warns before closing with unsaved clips).
+- File format (PersonalClip in src/signs.ts): per clip sign, start, end,
+  frames = 150 numbers each (x/y of pose 0-32, left hand 33-53, right hand
+  54-74; null = not seen). ~55 KB per clip, ~17 MB for everything.
+- src/segmenter.ts SignClip now also has start/end (where the sign sits in
+  the padded clip).
+- Save downloads into data/personal/ (git-ignored: it's personal data).
+- Tested with the fake webcam: 12 clips saved, correct format, no errors.
+- Also: scripts/__pycache__ removed from git and ignored.
+
+How to record (demo conditions!):
+- Same laptop, camera height, distance, lighting, similar clothes.
+- Get the signs checked by an ASL-fluent person first.
+- 15 per sign, vary speed/position a little. Download after each sign.
+
+2 (done). Train the personal classifier (scripts/train_personal.py):
+- Recordings go in data/personal/*.json (git-ignored). First batch was put
+  in data/ by mistake (NOT ignored) and moved - keep them in data/personal/.
+- asl_citizen.onnx re-exported with a second output, `features` [1, 256]
+  (the encoder's description of a clip, before the last layer).
+  scripts/convert_asl_citizen.py updated; rerun sh scripts/setup_model.sh.
+- Each clip -> same preprocessing as the app -> 256 features -> scaled ->
+  logistic regression (scikit-learn, installed in asl-ml) on our signs.
+- First run, 8 signs x 15 (COFFEE, HELLO, LARGE, MEDIUM, MILK, PLEASE,
+  SMALL, THANK-YOU), on held-back clips, 20 random splits, 3 per sign:
+    ASL Citizen alone (among these 8): 73%
+    Personal classifier:              100%  (no mix-ups)
+  Caveat: test clips are from the same sessions as training, so this
+  shows it works for Ola in that setup, not in a new room/day.
+- Saved data/personal/personal_model.json (50 KB): signs, mean, scale,
+  weights (one row of 256 per sign), bias.
+- Still to record: NOT-A-SIGN (else it always picks one of the 8), and the
+  other 12 signs if wanted.
+  Run: python scripts/train_personal.py  (after any new recordings)
+
+3 (done). "Personal" model in the browser:
+- src/aslcitizenmodel.ts predict() also returns `features` (256 numbers);
+  Prediction (src/signmodel.ts) has an optional `features` field.
+- src/personalmodel.ts: PersonalModel.load() reads
+  public/models/personal_model.json; classify(features) = scale ->
+  weights x features + bias -> softmax. predict(clip) runs ASL Citizen
+  itself when needed.
+- scripts/setup_model.sh copies data/personal/personal_model.json into
+  public/models/ (git-ignored).
+- Recognize page: model switch Combined (was "Both") / Kaggle /
+  ASL Citizen / Personal. Personal reuses ASL Citizen's features for the
+  same clip, so it adds ~0 ms. Main answer in Combined: Personal if >= 70%
+  sure (PERSONAL_SURE; NOT-A-SIGN -> "not sure"), else Kaggle for signs it
+  knows, else ASL Citizen.
+- Tested: browser = Python on 16 of Ola's clips (same sign, same % to
+  0.1%). Full page with fake webcam (Microsoft's signer), no errors:
+  Personal said HELLO 92% (ASL Citizen said NONSENSE) and LARGE 100%.
+
+After new recordings:  python scripts/train_personal.py
+                       sh scripts/setup_model.sh   (then refresh the page)
+
+NEXT: record NOT-A-SIGN (and the other 12 signs if wanted), retrain,
+then live test on Ola's signing in demo conditions.
 
 NEXT for this option: test live with real signing. Tune UNSURE_BELOW
 (recognizer.tsx) and START/END_FRAMES (segmenter.ts); check mirroring.
@@ -340,3 +433,96 @@ NEXT UP
 Step 5: The matcher - compare live signing against recorded examples and show
 the top 3 guesses with confidence. Optionally bootstrap with public landmark
 data (Kaggle "asl-signs" / PopSign) for signs that are in its 250-word list.
+
+SENTENCES - sign a whole sentence, then English (plan: A builder -> B Gemini
+-> C confirm screen -> D ElevenLabs voice). Nothing is translated or spoken
+until the signer has checked the signs (A) and approved the English (C).
+-------------------------------------------------------------------------------
+A (done). Sentence builder (src/sentencebuilder.tsx + .css), on the
+Recognize page, replacing the old "Recognized:" list:
+- Each confident answer becomes a chip: [COFFEE] [HELLO] [LARGE] ...
+- Tap a chip -> its other guesses (from every model, best first, our
+  spelling) -> tap one to swap; x removes a chip.
+- Tap any guess in a model card to add it yourself (e.g. after "not sure").
+- Done (Enter) finishes the sentence; Backspace removes the last sign;
+  Edit goes back; New sentence / Clear empties it. Signs made after Done
+  are ignored.
+- The finished sentence is just the list of sign names (gloss), e.g.
+  "COFFEE HOT LARGE PLEASE" - ready for step B.
+- Tested end to end with the fake webcam: chips added in order, swap,
+  Backspace, tap-to-add, Done, Edit, Clear all work; no errors.
+
+B + C (built, waiting for a Gemini key). Signs -> English with Gemini,
+then the signer picks and approves:
+- npm install @google/genai@2.28.0 (Google's official Gemini SDK).
+  Not Google's ADK (Agent Development Kit) - that's for multi-step agents;
+  one translation per sentence only needs the plain Gemini API.
+- server/translate.ts (runs on the dev server, never in the browser):
+  parseRequest() only accepts 1-30 sign names like COFFEE / THANK-YOU
+  (also blocks people slipping instructions to Gemini through the app);
+  translateSigns() calls ai.models.generateContent with
+    model gemini-3.5-flash-lite (Google's fast/cheap model, Oct 2026;
+    override with GEMINI_MODEL in .env), temperature 0.2,
+    a system instruction that keeps it LITERAL (no added meaning, first
+    person, ASL order -> English order, question if marked, alternatives
+    and "unclear" when the signs don't fit), and JSON output with a schema:
+    { sentence, alternatives (max 2), unclear }.
+- vite.config.ts: POST /api/translate on the dev server; reads
+  GEMINI_API_KEY from .env with loadEnv (no VITE_ prefix = never sent to
+  the browser). tsconfig.node.json now includes server/.
+- src/translate.ts: browser calls /api/translate.
+- src/translationpanel.tsx: after Done, shows the signs, the English
+  options (best one selected, tap another to choose), "It's a question"
+  toggle (asks again), a warning if Gemini says unclear, Try again on
+  errors, and Approve. Nothing is spoken (that's step D).
+- Tested without a real key: no key -> clear message (503); a fake key
+  reached Google, which rejected only the key (so the call itself is
+  right); bad input refused (400); page shows the message + Try again.
+  Checked the Gemini SDK is not in the browser bundle.
+
+To finish: create .env in the project folder with
+  GEMINI_API_KEY=your-key   (from aistudio.google.com -> Get API key)
+then restart npm run dev.
+
+Gemini test with the real key (done), via /api/translate:
+  COFFEE HOT LARGE PLEASE -> "Can I have a large hot coffee, please?"
+  HELLO-HOW-ARE-YOU       -> "Hello, how are you?"
+  MILK MORE (question)    -> "Can I have more milk?"
+  HELLO COFFEE COFFEE SMALL -> "Hello, I would like a small coffee."
+  (doubled COFFEE handled as one). One alternative added an unsigned
+  "please" - the signer approval step is what catches that.
+
+CUSTOM SIGNS (done): your own words and phrases
+- Problem: hello-how-are-you.json had 15 clips of the whole phrase
+  (~3.1 s each vs ~1.4 s for HELLO) saved as HELLO - would have taught the
+  model that the phrase means HELLO.
+- src/signs.ts: toSignName() turns typed text into a label:
+  "hello how are you?" -> HELLO-HOW-ARE-YOU (A-Z, 0-9, dashes, starts with
+  a letter, max 30 - same rule the Gemini route checks).
+- Recorder: "Add your own word or phrase" box (preview of the label, Add
+  selects it). Own labels appear in the dropdown and are remembered in this
+  browser (localStorage "customSigns"). Sign a phrase in one go, without
+  lowering your hands in the middle.
+- server/translate.ts: Gemini told that dash-joined glosses can be whole
+  phrases (HELLO-HOW-ARE-YOU -> "Hello, how are you?").
+- Recognize page: Personal line shows "+ your own: ..." labels.
+- Relabelled data/personal/hello-how-are-you.json clips HELLO ->
+  HELLO-HOW-ARE-YOU (movement data unchanged).
+- New recordings: HOT, COLD (iced.json), MORE. Retrained on 12 labels,
+  181 clips: personal 99% on held-back clips (ASL Citizen alone 65%).
+  Mix-ups: HELLO-HOW-ARE-YOU -> COFFEE 6/60, HELLO -> COLD 4/60.
+- Tested: add box, invalid label rejected, label kept after refresh, Gemini
+  route accepts the label.
+
+More recordings: HELP, YES, NO, and custom phrase HELP-ME (15 each).
+Retrained: 16 labels, 241 clips, personal 99% on held-back clips (ASL
+Citizen alone 65%). Mix-ups out of 60 tries each: HELLO -> COLD 5,
+HELLO-HOW-ARE-YOU -> COFFEE 4, HELP-ME -> HELP 3, HELP -> HELP-ME 1.
+
+Added WAIT. wait.json also contained the 15 YES clips again (Download saves
+every clip from the browser session). scripts/train_personal.py now skips
+duplicate clips (same sign + same recordedAt). Retrained: 17 labels,
+256 unique clips, personal 99% (ASL Citizen alone 68%). Mix-ups out of 60:
+HELLO-HOW-ARE-YOU -> COFFEE 4, HELP-ME -> HELP 3, HELLO -> COLD 1.
+
+NEXT: record NOT-A-SIGN, then D - ElevenLabs voice.

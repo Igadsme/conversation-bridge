@@ -27,6 +27,7 @@ export type Prediction = {
   bestOverall: Guess // the best of all 250 signs, even if not in our vocabulary
   frames: number
   ms: number
+  features?: Float32Array // ASL Citizen only: its 256-number description of the clip (used by PersonalModel)
 }
 
 // Our spelling -> Kaggle's spelling: "THANK-YOU" -> "thankyou"
