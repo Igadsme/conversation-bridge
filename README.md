@@ -1,4 +1,4 @@
-# Relay
+Sora
 
 **A two-way conversation aid for Deaf and hearing people.**
 
