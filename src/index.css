@@ -37,3 +37,27 @@ h1 {
   font-size: 2.25rem;
   margin: 24px 0;
 }
+
+/* STEP 8 - Recognize / Record mode buttons */
+.mode-switch {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-switch button {
+  font-size: 1.1rem;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.5);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mode-switch button[aria-pressed='true'] {
+  background: #00a3b8;
+  border-color: #00a3b8;
+  color: #fff;
+}

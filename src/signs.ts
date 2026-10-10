@@ -10,6 +10,32 @@ export const VOCABULARY = [
   'MORE', 'LESS', 'SUGAR',
   'WAIT', 'AGAIN', 'YES', 'NO', 'HELP',
 ]
+// ASL CITIZEN B3 - Our sign -> its name(s) in the ASL Citizen model.
+// Some signs have numbered variants (MILK1, MILK2); any of them counts as our sign.
+// LARGE, MEDIUM and SUGAR use the closest ASL Citizen sign.
+export const ASL_CITIZEN_NAMES: Record<string, string[]> = {
+  HELLO: ['HELLO'],
+  'THANK-YOU': ['THANKYOU'],
+  PLEASE: ['PLEASE'],
+  COFFEE: ['COFFEE'],
+  TEA: ['TEA'],
+  WATER: ['WATER'],
+  MILK: ['MILK1', 'MILK2'],
+  SMALL: ['SMALL'],
+  MEDIUM: ['MIDDLE', 'REGULAR'], // TODO: pick one once we've tested both
+  LARGE: ['BIG'],
+  HOT: ['HOT'],
+  COLD: ['COLD'],
+  MORE: ['MORE'],
+  LESS: ['LESS'],
+  SUGAR: ['SWEET'], // same sign as SUGAR in ASL - confirm with an ASL-fluent signer
+  WAIT: ['WAIT'],
+  AGAIN: ['AGAIN'],
+  YES: ['YES'],
+  NO: ['NO'],
+  HELP: ['HELP'],
+}
+
 
 // One landmark: x and y are 0–1 fractions of the image, z is relative depth
 export type Point = [number, number, number]

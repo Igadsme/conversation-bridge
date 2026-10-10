@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@litertjs/core": "^2.5.3",
     "@mediapipe/tasks-vision": "^1.1.0",
+    "onnxruntime-web": "^1.30.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

@@ -166,6 +166,172 @@ Cons: no ready weights from the 1st place repo; Holistic is slower; risk
 in steps 6-7 (exact input format must match). Our step 4 recorder is still
 useful for collecting TEST clips.
 
+Progress on this option (done):
+- Kaggle access working (token + accepted rules). Downloaded
+  sign_to_prediction_index_map.json and train.csv into kaggle/ (git-ignored).
+  - 403 Forbidden = rules not accepted on that account
+    (kaggle competitions list -s "isolated sign" -> userHasEntered False).
+- Vocabulary check: Kaggle covers 9 of our 20 signs:
+    HELLO, THANK-YOU, PLEASE, WATER, MILK, HOT, WAIT, YES, NO
+  Missing: COFFEE, TEA, SMALL, MEDIUM, LARGE, COLD, MORE, LESS, SUGAR,
+  AGAIN, HELP. Open decision: keep coffee counter or switch to a
+  snack/ice-cream counter built from Kaggle signs.
+- Downloaded the trained model (11 MB):
+    kaggle kernels output hoyso48/1st-place-solution-inference -p kaggle/model-1st
+  ("output" = files the notebook produced; "pull" = only its code)
+- Python env: conda create -n asl-ml python=3.11 (Python 3.14 is too new)
+    pip install ai-edge-litert pandas pyarrow numpy kaggle
+- scripts/check_model.py result:
+    serving_default: inputs [-1, 543, 3] float32 -> outputs [250] float32
+    17/18 top-1, 18/18 top-3 on 2 examples each of our 9 signs.
+    Only miss: YES guessed as CAN (8.45 vs 8.27) - similar signs.
+  Notes: scores are raw logits, apply softmax over our vocabulary for %.
+  These examples may be in the model's training data, so this proves the
+  format/pipeline; live webcam testing is the real accuracy check.
+
+Step 6 (done): HolisticLandmarker in the browser
+- Downloaded the holistic model (13.7 MB) into public/models/:
+    curl -L -o public/models/holistic_landmarker.task \
+      https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/1/holistic_landmarker.task
+- src/landmarks.ts: toModelFrame() turns each result into 543 x 3 numbers
+  in the model's order (face 0-467, left hand 468-488, pose 489-521,
+  right hand 522-542). Missing parts = NaN. Face is cut to 468 points,
+  dropping the 10 iris points the newer face model adds.
+- src/cameraview.tsx: HandLandmarker -> HolisticLandmarker. Draws body
+  (thin white lines) and hands (cyan + red). Status shows which parts are
+  tracked, e.g. "Face ✓ · Body ✓ · Left hand ✓ · Right hand ✗".
+  onFrame(result, modelFrame) now also passes the model-ready frame.
+  GPU first, automatic CPU fallback (fixes review item 10).
+- src/recorder.tsx: reads hands from leftHandLandmarks / rightHandLandmarks.
+- Mirroring: no flip applied. Our webcam gives MediaPipe the unmirrored
+  camera image, and we ASSUME the Kaggle phone data was the same. Not
+  confirmed - verify with known signs in step 8, flip x if it's worse.
+- public/models/hand_landmarker.task is no longer used (can delete later).
+
+Step 7 (done): Run the Kaggle model in the browser
+- npm install @litertjs/core@2.5.3 (LiteRT.js). Wasm loaded from jsdelivr.
+- PROBLEM: LiteRT.js can't run models with a variable frame count
+  ([-1, 543, 3]); WebGPU can't compile this model at all.
+- FIX: for each clip, copy the model bytes and overwrite the frame count
+  (int32 triples [-1,543,3] and [1,543,3]) with the clip length, then
+  compile (~15 ms) and run (5-30 ms) on 'wasm'.
+- Verified in headless Chrome against Python on 3 Kaggle examples:
+  identical top sign and scores (7.400, 11.400, 9.887).
+- scripts/setup_model.sh copies the model + sign list into public/models/
+  as sign_model.tflite / sign_labels.json (both git-ignored).
+- src/signmodel.ts: SignModel.load() (once, shared) and predict(clip,
+  vocabulary) -> top 3 of our signs + best of all 250, as probabilities.
+
+Step 8 (done): Live recognition
+- src/segmenter.ts: hand seen 2 frames -> start; no hands 8 frames
+  (~0.25 s) -> clip ends. Clips < 5 frames dropped, > 150 frames cut.
+  So: raise hands, sign, lower hands out of view.
+- src/recognizer.tsx: Recognize page. Shows the top 3 of our vocabulary
+  with % bars, "Not sure" below 30%, the best of all 250 signs, frames
+  and ms, and a running "Recognized:" list.
+- src/App.tsx: Recognize (default) / Record mode buttons.
+- Bug found in testing and fixed: React runs effects twice in dev, so
+  LiteRT was loaded twice ("LiteRT is already loading"). Loading is now
+  shared through one promise.
+- Tested: app loads with no errors (fake camera). NOT yet tested on a real
+  person signing.
+
+Step 8b (done): "Compare with" switch on the Recognize page
+- All 250 signs (default): top 3 from everything the model knows, so we can
+  try any Kaggle sign while the vocabulary isn't decided.
+- Our vocabulary: top 3 from src/signs.ts only (9 of 20 are known).
+- Switching re-ranks the last clip straight away.
+- SignModel.predict(clip) ranks all 250; predict(clip, VOCABULARY) only ours.
+- Checked in headless Chrome: all-250 top 3 matches Python
+  (hello -> pretend, sun; thankyou -> close, there; milk -> many, fast).
+
+ASL CITIZEN - Phase A (done): second model, covers the coffee words
+--------------------------------------------------------------------
+Plan: use BOTH models. Kaggle (250 signs, very accurate on those) and
+Microsoft ASL Citizen (2,731 signs, includes COFFEE, TEA, SMALL, ...).
+
+A1. Downloaded into asl-citizen/ (git-ignored):
+    - Trained pose model (27 MB, ST-GCN) from github.com/microsoft/ASL-citizen-code
+      releases/tag/checkpoints_v1  (code is MIT)
+    - Their code (needed for the model's structure):
+        git clone --depth 1 https://github.com/microsoft/ASL-citizen-code asl-citizen/code
+A2. Sign names: not in the weights. Their code sorts the names in the
+    dataset's train.csv, which is inside the 42.8 GB zip. Used remotezip to
+    pull just the CSVs (~4 MB) + use.txt -> asl-citizen/labels.json
+    (2,731 signs, 40,154 training videos).
+    LICENSE (use.txt, Microsoft Research License): non-commercial research
+    only; no distributing the data; no "stand-alone hosted solution for
+    others". => Local demo OK. Keep all ASL Citizen files git-ignored.
+    Ask ASL_Citizen@microsoft.com before any public hosting.
+    Vocabulary: 17 of 20 signs directly (MILK = MILK1/MILK2). Substitutes:
+    LARGE -> BIG, MEDIUM -> MIDDLE or REGULAR, SUGAR -> SWEET (same sign
+    in ASL - confirm with an ASL-fluent person).
+A3. Installed into asl-ml: torch, onnx, onnxruntime, mediapipe,
+    opencv-python-headless, remotezip.
+A4. scripts/convert_asl_citizen.py -> asl-citizen/asl_citizen.onnx (15.2 MB)
+    Input [1, 2, 128, 27] float32 (x/y, 128 frames, 27 points).
+    ONNX matches PyTorch (max difference 0.0002, same top sign).
+A5. scripts/check_asl_citizen.py: 40 TEST-set videos (unseen signers),
+    2 per vocabulary sign, through the same MediaPipe HolisticLandmarker as
+    the browser + their exact preprocessing:
+      all 2,731 signs: top-1 20/40, top-5 33/40
+      our 20 signs:    top-1 38/40 (95%)  misses: HOT->SUGAR, COLD->MILK
+    Preprocessing (copy exactly in the browser): x/y only, missing = 0,
+    stretch/pad to 128 frames, centre + scale by shoulders (padding frames
+    included), reorder [pose, left hand, right hand], keep 27 points.
+
+ASL CITIZEN - Phase B: ASL Citizen in the browser (done step by step by Ola)
+-----------------------------------------------------------------------------
+B1 (done). scripts/setup_model.sh also copies
+      asl-citizen/asl_citizen.onnx  -> public/models/asl_citizen.onnx
+      asl-citizen/labels.json       -> public/models/asl_citizen_labels.json
+    Both added to .gitignore (license: no redistribution).
+    Run: sh scripts/setup_model.sh  (lists all 4 model files when it works)
+B2 (done). npm install onnxruntime-web@1.30.0 (Microsoft's ONNX runtime for
+    the browser). Wasm files load from jsdelivr, version pinned to match.
+B3 (done). src/signs.ts: ASL_CITIZEN_NAMES maps our signs to ASL Citizen's
+    names (THANK-YOU -> THANKYOU, MILK -> MILK1/MILK2, LARGE -> BIG,
+    MEDIUM -> MIDDLE/REGULAR, SUGAR -> SWEET).
+B4 (done). src/aslcitizenmodel.ts: AslCitizenModel.load() / predict(clip,
+    vocabulary?) - same result shape as the Kaggle SignModel.
+    preprocess() is a line-by-line port of Microsoft's dataset code:
+      543-point frame -> their 75-point x/y layout (missing = 0)
+      -> stretch/pad to 128 frames -> centre + scale by shoulders (padding
+      frames included, like theirs) -> [pose, left, right] -> 27 points
+      -> [1, 2, 128, 27].
+    softmax is now exported from src/signmodel.ts and shared.
+    Tested in headless Chrome vs Python on 5 ASL Citizen test clips
+    (incl. one > 128 frames): identical top 3. ~150 ms per sign.
+B5 (done). New src/recognizer.tsx:
+    - loads both models separately (one failing doesn't stop the other)
+    - Model switch: Both (default) / Kaggle / ASL Citizen
+    - Compare with: All signs / Our vocabulary
+    - main answer = the more confident model, e.g. "COFFEE (ASL Citizen)"
+    - one top-3 card per model, side by side; names shown in our spelling
+    Styles: .recognizer-main, .recognizer-cards, .recognizer-result h3
+    in src/recognizer.css.
+    End-to-end test: ASL Citizen test videos fed to Chrome as a fake webcam
+    (--use-file-for-fake-video-capture), whole page running, no errors.
+      "Our vocabulary": HELLO -> HELLO (Kaggle 91%),
+                        COFFEE -> COFFEE (ASL Citizen 79-89%),
+                        BIG -> LARGE ranked 1st by ASL Citizen but only 7-10%
+                        -> "Not sure" (safe, but too cautious).
+      "All signs": Kaggle says MOON for BIG (doesn't know BIG);
+                   ASL Citizen says HELLO is MAKEBELIEVE/NONSENSE.
+
+Findings / ideas to try after live testing:
+- In "Our vocabulary", compute % over our signs only (re-normalise), so a
+  sign ranked 1st isn't shown as 7%.
+- ASL Citizen trained on whole videos incl. resting hands at the start/end;
+  our segmenter cuts those off. Try keeping ~10 frames before/after each
+  clip for ASL Citizen.
+
+NEXT for ASL Citizen: B10 - live test on our own signing, pick Kaggle /
+ASL Citizen / Both, and MEDIUM -> MIDDLE or REGULAR.
+
+NEXT for this option: test live with real signing. Tune UNSURE_BELOW
+(recognizer.tsx) and START/END_FRAMES (segmenter.ts); check mirroring.
+
 Simpler alternative still on the table: Kaggle landmarks + template matching
 (no model at all) - see the dataset research section above.
 

@@ -32,3 +32,14 @@ dist-ssr
 # Kaggle competition data (don't commit - license + size)
 kaggle/
 
+
+# Kaggle sign model + labels, copied by scripts/setup_model.sh (license not confirmed yet)
+public/models/sign_model.tflite
+public/models/sign_labels.json
+
+# ASL Citizen weights, code and samples (research-only data, download yourself)
+asl-citizen/
+
+# ASL Citizen model + labels, copied by scripts/setup_model.sh (license: no redistribution)
+public/models/asl_citizen.onnx
+public/models/asl_citizen_labels.json

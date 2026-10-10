@@ -12,9 +12,11 @@
 //   of frame, bad light), the example isn't saved - it would teach the matcher noise.
 // - round(): 4 decimal places is plenty and keeps the JSON about half the size.
 // - The dropdown counts show how many examples each sign has, e.g. COFFEE (3).
+// STEP 6: CameraView now uses HolisticLandmarker, which reports the left and
+// right hand separately, so the hands are read from those two lists.
 
 import { useEffect, useRef, useState } from 'react'
-import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'
+import type { HolisticLandmarkerResult, NormalizedLandmark } from '@mediapipe/tasks-vision'
 import CameraView from './cameraview'
 import { VOCABULARY, type Frame, type Point, type SignExample } from './signs'
 import './recorder.css'
@@ -41,14 +43,16 @@ export default function Recorder() {
   for (const ex of examples) counts.set(ex.sign, (counts.get(ex.sign) ?? 0) + 1)
 
   // Called by CameraView for every video frame
-  function handleFrame(result: HandLandmarkerResult) {
+  function handleFrame(result: HolisticLandmarkerResult) {
     if (phase !== 'recording') return
+    const toPoints = (hand: NormalizedLandmark[]) =>
+      hand.map((p): Point => [round(p.x), round(p.y), round(p.z)])
     framesRef.current.push({
       t: Math.round(performance.now() - startRef.current),
-      hands: result.landmarks.map((hand, i) => ({
-        handedness: result.handedness[i]?.[0]?.categoryName ?? 'Unknown',
-        points: hand.map((p): Point => [round(p.x), round(p.y), round(p.z)]),
-      })),
+      hands: [
+        ...result.leftHandLandmarks.map((hand) => ({ handedness: 'Left', points: toPoints(hand) })),
+        ...result.rightHandLandmarks.map((hand) => ({ handedness: 'Right', points: toPoints(hand) })),
+      ],
     })
   }
 

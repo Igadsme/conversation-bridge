@@ -1,24 +1,48 @@
-// CameraView - webcam feed with hand tracking drawn on top.
+// CameraView - webcam feed with body tracking drawn on top.
 // STEP 2: <video> shows the webcam, a <canvas> sits on top (both mirrored in CSS).
-// STEP 3: MediaPipe HandLandmarker finds up to 2 hands each frame and draws them.
-// STEP 4: onFrame passes each frame's hand data out (used by the recorder).
+// STEP 3: MediaPipe tracked up to 2 hands each frame and drew them.
+// STEP 4: onFrame passes each frame's data out (used by the recorder).
+// STEP 6: switched from HandLandmarker to HolisticLandmarker, which tracks the
+//         face, body and both hands - the 543 points the Kaggle model needs.
+//         onFrame now also gets the frame already converted to the model's format.
 
 import { useEffect, useRef, useState } from 'react'
 import {
   DrawingUtils,
   FilesetResolver,
-  HandLandmarker,
-  type HandLandmarkerResult,
+  HolisticLandmarker,
+  type HolisticLandmarkerResult,
 } from '@mediapipe/tasks-vision'
+import { toModelFrame } from './landmarks'
 import './cameraview.css'
 
 // Keep this version in sync with @mediapipe/tasks-vision in package.json
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm'
-const MODEL_URL = '/models/hand_landmarker.task'
+const MODEL_URL = '/models/holistic_landmarker.task'
 
 type Props = {
-  // STEP 4: called with the hand-tracking result for every new video frame
-  onFrame?: (result: HandLandmarkerResult) => void
+  // Called for every new video frame with MediaPipe's result and the same
+  // frame as 543 x 3 numbers in the Kaggle model's order (see landmarks.ts)
+  onFrame?: (result: HolisticLandmarkerResult, modelFrame: Float32Array) => void
+}
+
+// STEP 6: try the GPU first; some laptops can't run it, so fall back to the CPU
+// The loaded MediaPipe runtime (the package doesn't export a name for this type)
+type VisionFiles = Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>
+
+async function createLandmarker(vision: VisionFiles) {
+  for (const delegate of ['GPU', 'CPU'] as const) {
+    try {
+      return await HolisticLandmarker.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: MODEL_URL, delegate },
+        runningMode: 'VIDEO',
+      })
+    } catch (err) {
+      if (delegate === 'CPU') throw err
+      console.warn('GPU not available for tracking, falling back to CPU', err)
+    }
+  }
+  throw new Error('unreachable')
 }
 
 export default function CameraView({ onFrame }: Props) {
@@ -36,7 +60,7 @@ export default function CameraView({ onFrame }: Props) {
 
   useEffect(() => {
     let stream: MediaStream | null = null
-    let landmarker: HandLandmarker | null = null
+    let landmarker: HolisticLandmarker | null = null
     let frameId = 0
     let cancelled = false
 
@@ -66,21 +90,18 @@ export default function CameraView({ onFrame }: Props) {
         canvas.width = video.videoWidth
         canvas.height = video.videoHeight
 
-        // 2. Hand model
-        setStatus('Loading hand model…')
+        // 2. Holistic model (face + body + hands)
+        setStatus('Loading tracking model…')
         const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        landmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          numHands: 2,
-        })
+        landmarker = await createLandmarker(vision)
         if (cancelled) return stopAll()
-        setStatus('Tracking hands')
+        setStatus('Tracking')
 
-        // 3. Render loop: detect hands on each new video frame and draw them
+        // 3. Render loop: track each new video frame and draw it
         const ctx = canvas.getContext('2d')!
         const drawing = new DrawingUtils(ctx)
         let lastVideoTime = -1
+        let lastStatus = ''
 
         function loop() {
           if (!landmarker) return
@@ -89,15 +110,36 @@ export default function CameraView({ onFrame }: Props) {
           if (video.currentTime !== lastVideoTime) {
             lastVideoTime = video.currentTime
             const result = landmarker.detectForVideo(video, performance.now())
-            onFrameRef.current?.(result) // STEP 4: hand the data to whoever is listening
+            // Only build the 543-point frame when someone is listening
+            if (onFrameRef.current) onFrameRef.current(result, toModelFrame(result))
 
             ctx.clearRect(0, 0, canvas.width, canvas.height)
-            for (const hand of result.landmarks) {
-              drawing.drawConnectors(hand, HandLandmarker.HAND_CONNECTIONS, {
+            // Body: thin grey lines, so you can see the shoulders and arms are tracked
+            for (const pose of result.poseLandmarks) {
+              drawing.drawConnectors(pose, HolisticLandmarker.POSE_CONNECTIONS, {
+                color: 'rgba(255, 255, 255, 0.5)',
+                lineWidth: 2,
+              })
+            }
+            // Hands: same cyan skeleton and red dots as before
+            for (const hand of [...result.leftHandLandmarks, ...result.rightHandLandmarks]) {
+              drawing.drawConnectors(hand, HolisticLandmarker.HAND_CONNECTIONS, {
                 color: '#00e5ff',
                 lineWidth: 4,
               })
               drawing.drawLandmarks(hand, { color: '#ff2d55', radius: 4 })
+            }
+
+            // Show which parts are tracked; only re-render when it changes
+            const seen = (found: boolean) => (found ? '✓' : '✗')
+            const nextStatus =
+              `Face ${seen(result.faceLandmarks.length > 0)} · ` +
+              `Body ${seen(result.poseLandmarks.length > 0)} · ` +
+              `Left hand ${seen(result.leftHandLandmarks.length > 0)} · ` +
+              `Right hand ${seen(result.rightHandLandmarks.length > 0)}`
+            if (nextStatus !== lastStatus) {
+              lastStatus = nextStatus
+              setStatus(nextStatus)
             }
           }
 
@@ -106,7 +148,7 @@ export default function CameraView({ onFrame }: Props) {
         loop()
       } catch (err) {
         console.error(err)
-        setError('Could not start the camera or hand model. Check the console for details.')
+        setError('Could not start the camera or tracking model. Check the console for details.')
       }
     }
 
@@ -128,4 +170,3 @@ export default function CameraView({ onFrame }: Props) {
     </div>
   )
 }
-
