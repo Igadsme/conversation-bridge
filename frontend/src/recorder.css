@@ -1,0 +1,51 @@
+/* STEP 4 - Styles for the sign recorder (banner + controls) */
+
+/* Big status line: countdown, recording, or the last result */
+.recorder-banner {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  min-height: 2.5rem;
+}
+
+.recorder-banner.countdown { color: #e6a700; }
+.recorder-banner.recording { color: crimson; }
+
+.recorder-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.recorder-controls select,
+.recorder-controls button {
+  font-size: 1.1rem;
+  padding: 8px 14px;
+}
+
+/* PERSONAL CALIBRATION 1 - overall progress under the controls */
+.recorder-progress {
+  text-align: center;
+  opacity: 0.75;
+  margin-top: 12px;
+}
+
+/* CUSTOM SIGNS - add your own word or phrase */
+.recorder-custom {
+  margin-top: 12px;
+}
+
+.recorder-custom input {
+  font-size: 1.1rem;
+  padding: 8px 10px;
+  min-width: 16rem;
+}
+
+/* The label it will be saved as, e.g. HELLO-HOW-ARE-YOU */
+.recorder-preview {
+  font-weight: 700;
+  opacity: 0.8;
+}

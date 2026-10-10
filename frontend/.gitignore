@@ -1,0 +1,41 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.output
+.vinxi
+.tanstack/**
+.nitro
+*.local
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+
+# Sora on-device models (large / license-restricted - download locally,
+# see the root repo's scripts/setup_model.sh). Never commit these.
+public/models/holistic_landmarker.task
+public/models/sign_model.tflite
+public/models/sign_labels.json
+public/models/asl_citizen.onnx
+public/models/asl_citizen_labels.json
+public/models/personal_model.json
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

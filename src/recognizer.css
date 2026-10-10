@@ -15,6 +15,7 @@
   padding: 16px 20px;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 12px;
+  background: var(--card);
 }
 
 .recognizer-result h2 {
@@ -110,8 +111,8 @@
 }
 
 .recognizer-scope button[aria-pressed='true'] {
-  background: #00a3b8;
-  border-color: #00a3b8;
+  background: var(--violet);
+  border-color: var(--violet);
   color: #fff;
 }
 

@@ -71,7 +71,11 @@ function coverage(id: ModelId, model: Recognizer): string[] {
 
 type Results = Partial<Record<ModelId, Prediction>>
 
-export default function RecognizerPage() {
+type Props = {
+  onApprovedSentence?: (sentence: string) => void
+}
+
+export default function RecognizerPage({ onApprovedSentence }: Props) {
   const [models, setModels] = useState<Partial<Record<ModelId, Recognizer>>>({})
   const [errors, setErrors] = useState<Partial<Record<ModelId, string>>>({})
   const [choice, setChoice] = useState<Choice>('both')
@@ -281,6 +285,7 @@ export default function RecognizerPage() {
         onClear={clearSentence}
         onDone={() => setSentenceDone(true)}
         onEdit={() => setSentenceDone(false)}
+        onApproved={onApprovedSentence}
       />
 
       {activeIds.map((id) => {
