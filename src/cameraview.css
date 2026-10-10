@@ -21,4 +21,9 @@
   text-align: center;
 }
 
+.camera-status {
+  text-align: center;
+  font-size: 1.1rem;
+}
+
 /* The mirror flip is on the wrapper, so the video and the canvas flip together and stay lined up. */

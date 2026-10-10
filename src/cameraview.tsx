@@ -1,52 +1,97 @@
 import { useEffect, useRef, useState } from 'react'
+import { DrawingUtils, FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision'
 import './CameraView.css'
+
+// Keep this version in sync with @mediapipe/tasks-vision in package.json
+const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm'
+const MODEL_URL = '/models/hand_landmarker.task'
 
 export default function CameraView() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [status, setStatus] = useState('Starting camera…')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let stream: MediaStream | null = null
+    let landmarker: HandLandmarker | null = null
+    let frameId = 0
     let cancelled = false
 
-    async function startCamera() {
+    // Turn off the camera, the render loop and the model
+    function stopAll() {
+      cancelAnimationFrame(frameId)
+      stream?.getTracks().forEach((t) => t.stop())
+      landmarker?.close()
+      stream = null
+      landmarker = null
+    }
+
+    async function start() {
       try {
+        // 1. Camera
         stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 1280, height: 720, facingMode: 'user' },
           audio: false,
         })
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop())
-          return
-        }
+        if (cancelled) return stopAll()
 
         const video = videoRef.current!
         video.srcObject = stream
         await video.play()
 
-        // Make the canvas the exact pixel size of the camera image
         const canvas = canvasRef.current!
         canvas.width = video.videoWidth
         canvas.height = video.videoHeight
 
-        // Test drawing: proves the overlay lines up. Delete in step 3.
+        // 2. Hand model
+        setStatus('Loading hand model…')
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL)
+        landmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+          runningMode: 'VIDEO',
+          numHands: 2,
+        })
+        if (cancelled) return stopAll()
+        setStatus('Tracking hands')
+
+        // 3. Render loop: detect hands on each new video frame and draw them
         const ctx = canvas.getContext('2d')!
-        ctx.strokeStyle = 'lime'
-        ctx.lineWidth = 6
-        ctx.strokeRect(40, 40, 300, 300)
+        const drawing = new DrawingUtils(ctx)
+        let lastVideoTime = -1
+
+        function loop() {
+          if (!landmarker) return
+
+          // Only run the model when the camera has produced a new frame
+          if (video.currentTime !== lastVideoTime) {
+            lastVideoTime = video.currentTime
+            const result = landmarker.detectForVideo(video, performance.now())
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            for (const hand of result.landmarks) {
+              drawing.drawConnectors(hand, HandLandmarker.HAND_CONNECTIONS, {
+                color: '#00e5ff',
+                lineWidth: 4,
+              })
+              drawing.drawLandmarks(hand, { color: '#ff2d55', radius: 4 })
+            }
+          }
+
+          frameId = requestAnimationFrame(loop)
+        }
+        loop()
       } catch (err) {
         console.error(err)
-        setError('Could not open the camera. Check your browser permissions.')
+        setError('Could not start the camera or hand model. Check the console for details.')
       }
     }
 
-    startCamera()
+    start()
 
-    // Turn the camera off when the component goes away
     return () => {
       cancelled = true
-      stream?.getTracks().forEach((t) => t.stop())
+      stopAll()
     }
   }, [])
 
@@ -56,12 +101,8 @@ export default function CameraView() {
         <video ref={videoRef} playsInline muted />
         <canvas ref={canvasRef} />
       </div>
-      {error && <p className="camera-error">{error}</p>}
+      <p className="camera-status">{error ?? status}</p>
     </div>
   )
 }
 
-// Here's why some of these lines are there:
-// - cancelled flag: in dev mode, React runs effects twice. Without this flag the first camera stream never gets stopped, and your webcam light stays on.
-// - canvas.width = video.videoWidth: MediaPipe returns points as 0–1 fractions of the image. If the canvas matches the real camera resolution, you just multiply by width and height and the points land in the right place.
-// - playsInline muted: without these, Safari and iPads won't autoplay the video.
