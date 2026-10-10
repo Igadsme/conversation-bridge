@@ -525,4 +525,14 @@ duplicate clips (same sign + same recordedAt). Retrained: 17 labels,
 256 unique clips, personal 99% (ASL Citizen alone 68%). Mix-ups out of 60:
 HELLO-HOW-ARE-YOU -> COFFEE 4, HELP-ME -> HELP 3, HELLO -> COLD 1.
 
+Added custom signs SURE, DO, YOU, WANT (15 each). Retrained: 21 labels,
+316 unique clips, personal 98% on held-back clips (ASL Citizen alone 53%).
+Mix-ups out of 60: HELP-ME -> HELP 8, HELLO -> COLD 6,
+HELLO-HOW-ARE-YOU -> COFFEE 4, HELP -> HELP-ME 2.
+
+Added custom signs ANYTHING, ELSE (15 each). Retrained: 23 labels,
+346 unique clips, personal 98% on held-back clips (ASL Citizen alone 47%).
+Mix-ups out of 60: HELP-ME -> HELP 7, ANYTHING -> ELSE 6, HELLO -> ELSE 4,
+HELLO-HOW-ARE-YOU -> COFFEE 4.
+
 NEXT: record NOT-A-SIGN, then D - ElevenLabs voice.
