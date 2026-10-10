@@ -1,0 +1,63 @@
+CONVERSATION BRIDGE - STEPS TAKEN
+=================================
+
+Step 1: Create the project and repo
+-----------------------------------
+- Scaffolded a React + TypeScript app with Vite:
+    npm create vite@latest . -- --template react-ts
+    npm install
+- Added .env files to .gitignore so API keys never get committed.
+- Initialized git and created the GitHub repo:
+    git init
+    git add .
+    git commit -m "Initial scaffold"
+    gh repo create conversation-bridge --public --source=. --push
+- Installed MediaPipe:
+    npm install @mediapipe/tasks-vision
+
+Step 2: Camera feed with a canvas overlay
+-----------------------------------------
+- Created src/cameraview.tsx and src/cameraview.css.
+- A <video> shows the webcam (navigator.mediaDevices.getUserMedia).
+- A transparent <canvas> sits exactly on top of the video, sized to the
+  camera's real resolution, so drawn points line up with the image.
+- The wrapper is mirrored (transform: scaleX(-1)) so the signer sees a mirror.
+- A "cancelled" flag stops the camera cleanly when React runs effects twice
+  in dev mode.
+- Replaced src/App.tsx with a page that renders <CameraView />.
+- Tested with a green test square, then committed.
+
+Step 3: Hand tracking with MediaPipe HandLandmarker
+---------------------------------------------------
+- Downloaded the hand model into the project:
+    mkdir -p public/models
+    curl -L -o public/models/hand_landmarker.task \
+      https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+- Loaded the WASM runtime from the jsdelivr CDN (version matched to
+  package.json) and created a HandLandmarker in VIDEO mode, tracking 2 hands.
+- A requestAnimationFrame loop runs the model on each new video frame and
+  draws the hand skeleton (cyan lines, red dots) on the canvas.
+- stopAll() shuts down the camera, loop and model on cleanup.
+- A status line shows: Starting camera -> Loading hand model -> Tracking hands.
+- Committed: "hand tracking using camera"
+
+Fix: Rejected push (non-fast-forward)
+-------------------------------------
+- Cause: README.md had been edited on github.com, so the remote had a commit
+  the laptop didn't.
+- Fix:
+    git pull --rebase origin master
+    git push origin master
+- Habit: run "git pull" before starting work.
+
+Fix: File name casing
+---------------------
+- Files are lowercase (cameraview.tsx / cameraview.css) but the code imported
+  ./CameraView.css. macOS ignores case; Linux (Vultr, CI) does not.
+- Changed the import to ./cameraview.css, checked the build, committed and
+  pushed: "Fix CSS import casing to match file name"
+
+NEXT UP
+-------
+Step 4: Record examples of each starter sign (5 to 10 each, ideally from an
+ASL-fluent signer) as hand-landmark sequences - the start of recognition.
