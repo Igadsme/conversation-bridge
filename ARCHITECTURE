@@ -1,0 +1,64 @@
+Application architecture
+┌──────────────────────────── Browser ──────────────────────────────┐
+│                                                                  │
+│  DEAF PERSON                                                     │
+│                                                                  │
+│  Hold “Sign”                                                     │
+│      ↓                                                           │
+│  Camera captures 1–3 seconds                                     │
+│      ↓                                                           │
+│  MediaPipe                                                       │
+│      ├── left-hand landmarks                                     │
+│      ├── right-hand landmarks                                    │
+│      ├── selected face landmarks                                 │
+│      └── upper-body pose landmarks                               │
+│      ↓                                                           │
+│  Normalize and create fixed-length landmark sequence              │
+│      ↓                                                           │
+│  Temporal sentence model                                         │
+│      ↓                                                           │
+│  Top three intents + confidence                                  │
+│      ↓                                                           │
+│  Optional contextual LLM interpretation ───────────────┐         │
+│      ↓                                                  │         │
+│  Proposed English messages                              │         │
+│      ↓                                                  │         │
+│  Select / edit / reject / type instead                  │         │
+│      ↓ confirmed text                                   │         │
+│  POST /api/elevenlabs/speech ───────────────────────────┼────┐    │
+│                                                        │    │    │
+│  HEARING PERSON                                        │    │    │
+│                                                        │    │    │
+│  Microphone                                            │    │    │
+│      ↓                                                 │    │    │
+│  ElevenLabs Scribe realtime connection ◀───────────────┼─┐  │    │
+│      ↓                                                 │ │  │    │
+│  Partial and committed captions                        │ │  │    │
+│      ↓                                                 │ │  │    │
+│  Large readable caption display                        │ │  │    │
+│                                                        │ │  │    │
+└────────────────────────────────────────────────────────┼─┼──┼────┘
+                                                         │ │  │
+                    TRUSTED BACKEND                      │ │  │
+┌────────────────────────────────────────────────────────┼─┼──┼────┐
+│                                                        │ │  │    │
+│  GET /api/elevenlabs/scribe-token ─────────────────────┘ │  │    │
+│  • Creates a temporary Scribe token                      │  │    │
+│  • Permanent API key never enters browser                │  │    │
+│                                                          │  │    │
+│  POST /api/interpret ─────────────────────────────────────┘  │    │
+│  • Receives intent candidates and conversation context       │    │
+│  • Returns ranked natural-language suggestions               │    │
+│  • Does not receive raw video                                │    │
+│                                                              │    │
+│  POST /api/elevenlabs/speech ◀────────────────────────────────┘    │
+│  • Validates confirmed text                                       │
+│  • Calls ElevenLabs text-to-speech                                │
+│  • Streams audio back to browser                                  │
+│                                                                   │
+│  Server secrets:                                                  │
+│  • ELEVENLABS_API_KEY                                             │
+│  • ELEVENLABS_VOICE_ID                                            │
+│  • Optional LLM_API_KEY                                           │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
