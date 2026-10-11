@@ -71,18 +71,20 @@ function Conversation() {
     setMsgs((m) => [...m, { id: id.current++, who, text, at: Date.now(), typed: typedMsg }]);
   }
 
-  // Signer approved a sentence in the sign pipeline: speak it with
-  // ElevenLabs (via the backend) and only then add it to the chat.
-  async function approveAndSpeak(text: string) {
+  // Signer approved (or typed) a message: show it in the chat straight away,
+  // then speak it with ElevenLabs (via the backend). If speech fails, the
+  // message stays on screen so the other person can still read it.
+  async function approveAndSpeak(text: string, typedMsg = false) {
+    add("you", text, typedMsg);
+    setView("chat");
     setBusy("speak");
     setError(null);
     try {
       const playback = await startSpeech(text);
-      add("you", text);
-      setView("chat");
       await playback.finished;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not speak the message");
+      const detail = reason instanceof Error ? reason.message : "unknown error";
+      setError(`Couldn't speak it aloud (${detail}). Show the screen to the other person instead.`);
     } finally {
       setBusy(null);
     }
@@ -112,7 +114,7 @@ function Conversation() {
     event.preventDefault();
     const text = typed.trim();
     if (!text || busy === "speak") return;
-    void approveAndSpeak(text);
+    void approveAndSpeak(text, true);
     setTyped("");
   }
 
@@ -120,8 +122,8 @@ function Conversation() {
 
   if (view === "sign") {
     return (
-      <Shell title="Conversation Mode" backTo="/conversation">
-        <p className="mt-2 text-sm text-muted-foreground">
+      <Shell title="Conversation Mode" onBack={() => setView("chat")} wide>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
           Sign your reply. Review the English, then approve it — Sora speaks it into the conversation.
         </p>
         <div className="sora-tools">

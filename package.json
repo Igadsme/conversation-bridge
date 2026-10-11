@@ -9,37 +9,23 @@
   "scripts": {
     "dev": "concurrently -k -n backend,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "tsx watch server/index.ts",
-    "dev:web": "vite",
-    "build": "tsc -b && vite build && tsc -p tsconfig.server.json",
-    "lint": "oxlint src server vite.config.ts --ignore-pattern '**/._*'",
-    "preview": "vite preview",
+    "dev:web": "npm --prefix frontend run dev",
+    "build": "tsc -p tsconfig.server.json",
+    "lint": "oxlint server --ignore-pattern '**/._*'",
     "start": "NODE_ENV=production node dist-server/index.js",
     "test": "node --import tsx --test server/*.test.ts"
   },
   "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.71.0",
-    "@elevenlabs/react": "^1.17.0",
-    "@google/genai": "^2.28.0",
-    "@litertjs/core": "^2.5.3",
-    "@mediapipe/tasks-vision": "^1.1.0",
-    "onnxruntime-web": "^1.30.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "@google/genai": "^2.28.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^9.2.1",
     "oxlint": "^1.81.0",
     "tsx": "^4.20.6",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "typescript": "~6.0.2"
   },
   "optionalDependencies": {
-    "@oxlint/binding-darwin-arm64": "^1.87.0",
-    "@rolldown/binding-darwin-arm64": "^1.2.13"
+    "@oxlint/binding-darwin-arm64": "^1.87.0"
   }
 }

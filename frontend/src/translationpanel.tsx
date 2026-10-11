@@ -102,6 +102,7 @@ export default function TranslationPanel({ signs, onApprove }: Props) {
           onChange={(e) => {
             setQuestion(e.target.checked)
             setTranslation(null) // show "Turning your signs into English…" until the new answer
+            setError(null)
             setChosen(0)
           }}
         />{' '}

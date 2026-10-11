@@ -4,8 +4,6 @@
 .camera {
   position: relative;
   width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
   aspect-ratio: 16 / 9;
   transform: scaleX(-1); /* mirror, so it feels like a mirror to the signer */
   overflow: hidden;
@@ -24,14 +22,86 @@
   object-fit: cover;
 }
 
-.camera-error {
-  color: crimson;
-  text-align: center;
+/* Holds the mirrored camera plus the overlays, which must not be mirrored */
+.camera-wrap {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
-.camera-status {
+/* Which body parts are tracked: small chips over the bottom of the video */
+.camera-parts {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.camera-parts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(14, 12, 22, 0.72);
+  backdrop-filter: blur(6px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.camera-parts li > span[aria-hidden] {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.camera-parts li.found {
+  color: var(--text-h);
+}
+
+.camera-parts li.found > span[aria-hidden] {
+  background: var(--teal);
+  box-shadow: 0 0 8px var(--teal);
+}
+
+/* "Starting camera…" / "Loading tracking model…" centred over the video */
+.camera-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.camera-error {
+  color: var(--danger);
   text-align: center;
-  font-size: 1.1rem;
 }
 
 /* The mirror flip is on the wrapper, so the video and the canvas flip together and stay lined up. */
+
+/* Phones: keep the chips on one row so they cover less of the video */
+@media (max-width: 620px) {
+  .camera-parts {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    gap: 4px;
+  }
+  .camera-parts li {
+    padding: 3px 7px;
+    gap: 4px;
+    font-size: 0.68rem;
+  }
+}

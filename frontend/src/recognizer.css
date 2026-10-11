@@ -1,27 +1,134 @@
-/* STEP 8 - Live recognition: status line, top 3 guesses, history */
+/* STEP 8 - Live recognition: camera + answer on the left, sentence + guesses on the right */
 
-.recognizer-state {
-  text-align: center;
-  font-size: 1.4rem;
-  font-weight: 600;
-  min-height: 2rem;
+.recognizer {
+  display: grid;
+  gap: 20px;
 }
 
-.recognizer-state.signing { color: crimson; }
+/* Laptop or tablet on the counter: camera and sentence side by side */
+@media (min-width: 960px) {
+  .recognizer {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+  .recognizer-stage {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* Status pill under the camera */
+.recognizer-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 14px auto 0;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.recognizer-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+
+.recognizer-state.signing {
+  border-color: var(--danger);
+  color: var(--text-h);
+}
+
+.recognizer-state.signing .recognizer-dot {
+  background: var(--danger);
+  animation: soft-pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--danger);
+}
+
+/* The single answer, shown big */
+.recognizer-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 16px 0 0;
+  font-size: 2.5rem;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.recognizer-main small {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.recognizer-main.unsure {
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+
+/* STABILIZATION - transient note under the status line (ignored repeats) */
+.recognizer-note {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.recognizer-error {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.recognizer-meta {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.recognizer-hint {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ASL CITIZEN B5 - one card per model */
+.recognizer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
 
 .recognizer-result {
-  max-width: 560px;
-  margin: 16px auto;
-  padding: 16px 20px;
-  border: 1px solid rgba(127, 127, 127, 0.4);
-  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
   background: var(--card);
 }
 
-.recognizer-result h2 {
-  margin: 0 0 12px;
-  font-size: 2.25rem;
-  text-align: center;
+.recognizer-result h3 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .recognizer-result ol {
@@ -30,92 +137,103 @@
   padding: 0;
 }
 
+.recognizer-result .recognizer-meta {
+  text-align: left;
+}
+
 /* Each guess is a button (SENTENCE A: tap to add it to the sentence) */
 .recognizer-guess {
   display: grid;
-  grid-template-columns: 8rem 1fr 3rem;
-  gap: 12px;
+  grid-template-columns: minmax(5.5rem, 7rem) 1fr 2.8rem;
+  gap: 10px;
   align-items: center;
   width: 100%;
-  font: inherit;
-  font-size: 1.2rem;
-  padding: 4px 6px;
-  color: inherit;
+  min-height: 44px;
+  padding: 4px 8px;
+  font-size: 1.05rem;
   text-align: left;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
 }
 
 .recognizer-guess:hover:not(:disabled) {
-  background: rgba(0, 163, 184, 0.12);
+  background: rgba(141, 108, 243, 0.14);
 }
 
 .recognizer-guess:disabled {
   cursor: default;
+  opacity: 0.6;
 }
 
-.recognizer-sign { font-weight: 600; }
+.recognizer-sign {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Confidence bar */
 .recognizer-bar {
-  height: 12px;
-  border-radius: 6px;
-  background: rgba(127, 127, 127, 0.2);
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
 .recognizer-bar span {
   display: block;
   height: 100%;
-  background: #00a3b8;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--violet), var(--teal));
 }
 
-.recognizer-pct { text-align: right; }
-
-.recognizer-meta {
-  text-align: center;
-  font-size: 0.9rem;
-  opacity: 0.75;
-}
-
-/* STABILIZATION - transient note under the status line (ignored repeats) */
-.recognizer-note {
-  text-align: center;
-  font-size: 0.85rem;
+.recognizer-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
-  min-height: 1.2rem;
-  margin: 4px 0 0;
 }
 
-.recognizer-history {
-  text-align: center;
-  font-size: 1.3rem;
+/* Model switches and coverage, folded away */
+.recognizer-advanced {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 
-.recognizer-history button {
+.recognizer-advanced summary {
+  cursor: pointer;
   font-size: 0.9rem;
-  margin-left: 8px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
-/* "Compare with" switch: all 250 signs or only our vocabulary */
+.recognizer-advanced[open] summary {
+  margin-bottom: 12px;
+}
+
 .recognizer-scope {
   display: flex;
-  justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 0.95rem;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.recognizer-scope > span {
+  min-width: 7rem;
+  color: var(--muted);
 }
 
 .recognizer-scope button {
-  font-size: 0.95rem;
+  min-height: 36px;
   padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(127, 127, 127, 0.5);
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   background: transparent;
-  color: inherit;
   cursor: pointer;
 }
 
@@ -125,26 +243,6 @@
   color: #fff;
 }
 
-/* ASL CITIZEN B5 - main answer + one card per model, side by side */
-.recognizer-main {
-  text-align: center;
-  font-size: 2.25rem;
-  margin: 12px 0;
-}
-
-.recognizer-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.recognizer-cards .recognizer-result {
-  margin: 0;
-  max-width: none;
-}
-
-.recognizer-result h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  opacity: 0.8;
+.recognizer-advanced .recognizer-meta {
+  text-align: left;
 }

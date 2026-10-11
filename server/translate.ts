@@ -1,7 +1,7 @@
 // SENTENCE B - Turn a list of signs (ASL gloss) into English with Gemini.
 //
-// Runs on the dev server, never in the browser, so the API key stays secret:
-// vite.config.ts serves POST /api/translate and calls translateSigns() here.
+// Runs on the backend, never in the browser, so the API key stays secret:
+// server/app.ts serves POST /api/translate and calls translateSigns() here.
 // Only the sign words are sent to Gemini - no video, no landmarks.
 //
 // Setup: put your key in .env (git-ignored) as  GEMINI_API_KEY=...

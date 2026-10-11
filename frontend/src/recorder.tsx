@@ -202,7 +202,9 @@ export default function Recorder() {
             ))}
           </select>
         </label>
-        <button onClick={toggle}>{armed ? 'Pause (Space)' : 'Start (Space)'}</button>
+        <button className="recorder-start" aria-pressed={armed} onClick={toggle}>
+          {armed ? 'Pause (Space)' : 'Start (Space)'}
+        </button>
         <button onClick={undo} disabled={armed || count === 0}>
           Undo last {sign}
         </button>
