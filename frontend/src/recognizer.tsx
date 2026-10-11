@@ -88,6 +88,7 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
   const [scope, setScope] = useState<Scope>('all')
   const [signing, setSigning] = useState(false)
   const [results, setResults] = useState<Results>({})
+  const [cameraError, setCameraError] = useState<string | null>(null)
   // SENTENCE A: the sentence being built, and whether Done was pressed
   const [chips, setChips] = useState<Chip[]>([])
   const [sentenceDone, setSentenceDoneState] = useState(false)
@@ -123,7 +124,12 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
     const loaders: Record<ModelId, () => Promise<Recognizer>> = {
       kaggle: () => SignModel.load(),
       citizen: () => AslCitizenModel.load(),
-      personal: () => PersonalModel.load(),
+      // PersonalModel classifies ASL Citizen features; do not expose it as
+      // ready when its required upstream model is unavailable.
+      personal: async () => {
+        await AslCitizenModel.load()
+        return PersonalModel.load()
+      },
     }
     for (const id of Object.keys(loaders) as ModelId[]) {
       loaders[id]()
@@ -182,6 +188,10 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
           }
         } catch (err) {
           console.error(`${MODEL_INFO[id].label} prediction failed`, err)
+          setErrors((prev) => ({
+            ...prev,
+            [id]: `${MODEL_INFO[id].label} recognition is unavailable: ${err instanceof Error ? err.message : String(err)}`,
+          }))
         }
       }
       setResults(next)
@@ -238,7 +248,7 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
     <div className="recognizer">
       {/* Left on wide screens: what the camera sees and the current answer */}
       <div className="recognizer-stage">
-        <CameraView onFrame={handleFrame} />
+        <CameraView onFrame={handleFrame} onError={setCameraError} />
 
         <p className={`recognizer-state ${signing ? 'signing' : ''}`} role="status">
           <span className="recognizer-dot" aria-hidden />
@@ -266,6 +276,11 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
         {errors.kaggle && (
           <p className="recognizer-error" role="alert">
             Kaggle mode is unavailable because its sign model is missing. Use Combined or another local model.
+          </p>
+        )}
+        {cameraError && (
+          <p className="recognizer-error" role="alert">
+            Sign recognition is unavailable: {cameraError}
           </p>
         )}
 
@@ -344,8 +359,13 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
           <div className="recognizer-scope" role="group" aria-label="Model">
             <span>Model</span>
             {(['both', 'kaggle', 'citizen', 'personal'] as Choice[]).map((c) => (
-              <button key={c} aria-pressed={choice === c} disabled={c === 'kaggle' && Boolean(errors.kaggle)} onClick={() => change(c, scope)}>
-                {c === 'both' ? 'Combined' : MODEL_INFO[c].label}{c === 'kaggle' && errors.kaggle ? ' (unavailable)' : ''}
+              <button
+                key={c}
+                aria-pressed={choice === c}
+                disabled={c !== 'both' && Boolean(errors[c] && !models[c])}
+                onClick={() => change(c, scope)}
+              >
+                {c === 'both' ? 'Combined' : MODEL_INFO[c].label}{c !== 'both' && errors[c] && !models[c] ? ' (unavailable)' : ''}
               </button>
             ))}
           </div>

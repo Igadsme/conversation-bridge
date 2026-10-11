@@ -24,6 +24,7 @@ type Props = {
   // Called for every new video frame with MediaPipe's result and the same
   // frame as 543 x 3 numbers in the Kaggle model's order (see landmarks.ts)
   onFrame?: (result: HolisticLandmarkerResult, modelFrame: Float32Array) => void
+  onError?: (message: string) => void
 }
 
 // STEP 6: try the GPU first; some laptops can't run it, so fall back to the CPU
@@ -45,7 +46,7 @@ async function createLandmarker(vision: VisionFiles) {
   throw new Error('unreachable')
 }
 
-export default function CameraView({ onFrame }: Props) {
+export default function CameraView({ onFrame, onError }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState('Starting camera…')
@@ -151,7 +152,9 @@ export default function CameraView({ onFrame }: Props) {
         loop()
       } catch (err) {
         console.error(err)
-        setError('Could not start the camera or tracking model. Check the console for details.')
+        const message = 'Could not start the camera or tracking model. Check permissions and model availability.'
+        setError(message)
+        onError?.(message)
       }
     }
 
