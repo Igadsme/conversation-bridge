@@ -13,7 +13,7 @@ const config: BackendConfig = {
 }
 const api = createApiHandler(config)
 const port = Number(process.env.PORT || 3001)
-const host = process.env.HOST || '127.0.0.1'
+const host = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1')
 
 // API only: the web app (frontend/) is built and deployed on its own and
 // forwards /api/* here (see frontend/src/start.ts).
