@@ -1,10 +1,10 @@
-Sora
+# Sora
 
 **A two-way conversation aid for Deaf and hearing people.**
 
-Relay is a web app that helps a Deaf signer and a hearing person communicate in a focused setting, such as ordering at a café. It combines limited, camera-based sign recognition with signer-approved text-to-speech, and live captions for spoken replies.
+Sora is a web app that helps a Deaf signer and a hearing person communicate in a focused setting, such as ordering at a café. It combines limited, camera-based sign recognition with signer-approved text-to-speech, and live captions for spoken replies.
 
-> **Prototype scope:** Relay is not a general-purpose ASL translator, and it is not a replacement for human interpreters. Sign language recognition is a difficult, context-dependent problem. This prototype demonstrates a small, explicitly supported vocabulary, and the signer reviews every proposed message before it is spoken. It is not meant for medical, legal or emergency use.
+> **Prototype scope:** Sora is not a general-purpose ASL translator, and it is not a replacement for human interpreters. Sign language recognition is a difficult, context-dependent problem. This prototype demonstrates a small, explicitly supported vocabulary, and the signer reviews every proposed message before it is spoken. It is not meant for medical, legal or emergency use.
 
 Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](https://github.com/demi43/conversation-bridge) (working name: Conversation Bridge).
 
@@ -14,9 +14,10 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 
 1. The signer uses the camera to perform a supported sign or phrase.
 2. On-device landmark tracking (MediaPipe) follows the signer's hands, face and body.
-3. A sign recognition model, trained on Deaf signers by the winners of a Kaggle competition, proposes the top 3 signs with confidence scores.
-4. The signer reviews, edits, accepts, or rejects the proposed words.
-5. Only after approval, ElevenLabs text-to-speech speaks the confirmed message.
+3. Sign recognition models (the 1st-place Kaggle model, Microsoft's ASL Citizen and an optional personal model trained on the signer) propose the top 3 signs with confidence scores.
+4. The signer builds a sentence from the recognized signs, swapping, removing or adding words.
+5. Gemini turns the signs into literal English, and the signer approves, edits or rejects it.
+6. Only after approval, ElevenLabs text-to-speech speaks the confirmed message.
 
 ### Speech → captions
 
@@ -30,7 +31,7 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 - Camera-based recognition for a limited set of supported signs or phrases
 - Signer review and correction before speech playback
 - Realtime speech captions
-- Text-to-speech voice selection
+- Personal calibration: the signer records their own examples, including custom phrases, for higher accuracy
 - Confidence-aware handling: uncertain recognition prompts a correction or phrase selection
 - Privacy-first design: camera processing and sign recognition run locally in the browser; no video is stored
 - Responsive web experience for a laptop or tablet on the counter
@@ -41,15 +42,15 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 | --- | --- | --- |
 | 1 | Vite + React + TypeScript project, GitHub repo | Done |
 | 2 | Webcam feed with a mirrored canvas overlay | Done |
-| 3 | Hand tracking with MediaPipe HandLandmarker (2 hands) | Done |
-| 4 | Sign recorder: capture landmark examples per sign, download as JSON | Built |
-| 5 | Sign recognition: reuse the 1st-place Kaggle model, show top 3 guesses | In progress |
-| 6 | Sentence builder, then Gemini turns the signs into a literal English sentence | Built (needs Gemini key) |
-| 7 | Confirm screen (built) + ElevenLabs text-to-speech with voice picker | In progress |
-| 8 | ElevenLabs realtime speech-to-text captions | Planned |
-| 9 | Fingerspelling fallback and repair (start over, wait) | Planned |
+| 3 | Tracking with MediaPipe (HandLandmarker, now HolisticLandmarker) | Done |
+| 4 | Sign recorder: capture landmark examples per sign, download as JSON | Done |
+| 5 | Sign recognition: Kaggle + ASL Citizen + personal model, top 3 guesses | Built (live tuning left) |
+| 6 | Sentence builder, then Gemini turns the signs into a literal English sentence | Done |
+| 7 | Confirm screen + ElevenLabs text-to-speech | Built (voice set in `.env`; in-app voice picker planned) |
+| 8 | ElevenLabs realtime speech-to-text captions | Built (Captions and Conversation pages) |
+| 9 | NOT-A-SIGN recordings, fingerspelling fallback and repair (start over, wait) | Planned |
 
-**Step 5 in detail:**
+**Step 5 (recognition) in detail:**
 
 - [x] Kaggle data access set up; sign list and `train.csv` downloaded
 - [x] Checked our vocabulary against the model's 250 signs (9 of 20 covered, see [Vocabulary](#vocabulary))
@@ -63,6 +64,9 @@ Built for Hacklanta '26 (Social Good track). Repo: [demi43/conversation-bridge](
 - [x] ASL Citizen added in the browser: model files, `onnxruntime-web`, name mapping, [`frontend/src/aslcitizenmodel.ts`](frontend/src/aslcitizenmodel.ts) (matches Python on test clips)
 - [x] Model switch on the Recognize page: Both (default), Kaggle or ASL Citizen; tested end to end with ASL Citizen test videos as a fake webcam
 - [x] Sentence builder: recognized signs collect as chips you can swap, remove or add to, then Done ([`frontend/src/sentencebuilder.tsx`](frontend/src/sentencebuilder.tsx))
+- [x] Personal calibration model, with **Personal** and **Combined** modes on the Recognize page (see [Recording your own signing](#recording-your-own-signing-personal-calibration))
+- [x] Custom words and phrases (e.g. HELLO-HOW-ARE-YOU) recognized as one unit
+- [ ] Record NOT-A-SIGN so the personal model can say "not sure"
 - [ ] Test live on our own signing; tune thresholds; confirm mirroring
 
 A detailed log of each step, with the commands used, is in [`steps.txt`](steps.txt).
@@ -104,7 +108,7 @@ Clips are cut exactly the way the Recognize page cuts them, so the training data
 
 Only body and hand points are saved, never video. `data/personal/` is git-ignored because it's personal data. Get permission before recording anyone else.
 
-**Training:** `python scripts/train_personal.py` (in the `asl-ml` env) reads every file in `data/personal/`, runs each clip through ASL Citizen to get its 256-number description, and trains a small classifier on those for your signs. On a first batch of 8 signs (15 clips each), clips held back from training were recognized 100% of the time, against 73% for ASL Citizen alone among the same 8 signs. With 12 labels (11 signs plus the phrase HELLO-HOW-ARE-YOU, 181 clips) it was 99%, against 65% for ASL Citizen. Those test clips come from the same recording sessions, so record in demo conditions. The result is saved to `data/personal/personal_model.json`.
+**Training:** `python scripts/train_personal.py` (in the `asl-ml` env) reads every file in `data/personal/`, runs each clip through ASL Citizen to get its 256-number description, and trains a small classifier on those for your signs. With the current 23 labels (346 unique clips, including the custom phrases HELLO-HOW-ARE-YOU and HELP-ME), clips held back from training are recognized 98% of the time, against 47% for ASL Citizen alone among the same labels. The most common mix-ups are HELP-ME → HELP and ANYTHING → ELSE. Duplicate clips (same sign and recording time) are skipped. Those test clips come from the same recording sessions, so record in demo conditions. The result is saved to `data/personal/personal_model.json`.
 
 **In the app:** run `sh scripts/setup_model.sh` to copy the trained model into `frontend/public/models/` (git-ignored), then pick **Personal** or **Combined** on the Recognize page. Personal reuses ASL Citizen's description of each clip, so it adds no noticeable time. In **Combined**, the personal answer is shown when it's at least 70% sure; otherwise the app falls back to Kaggle and ASL Citizen, so signs you haven't recorded still work. Until **NOT-A-SIGN** is recorded, the personal model always picks one of the recorded signs, which is why it needs to be that sure.
 
@@ -181,9 +185,7 @@ The starter vocabulary (coffee counter) is in [`frontend/src/signs.ts`](frontend
 | --- | --- |
 | HELLO (390), THANK-YOU (357), PLEASE (384), WATER (384), MILK (377), HOT (383), WAIT (346), YES (386), NO (370) | COFFEE, TEA, SMALL, MEDIUM, LARGE, COLD, MORE, LESS, SUGAR, AGAIN, HELP |
 
-**Open decision:** keep the coffee counter (record or fingerspell the 11 missing signs), or switch to a snack or ice-cream counter that uses only signs the model already knows, for example:
-
-> HELLO, BYE, PLEASE, THANK-YOU, ICECREAM, CHOCOLATE, DRINK, WATER, MILK, SNACK, FOOD, PIZZA, FRENCHFRIES, APPLE, ORANGE, CEREAL, NUTS, GUM, HAVE, LIKE, GIVE, ANOTHER, NAPKIN, HOT, NOT, HUNGRY, THIRSTY, WAIT, YES, NO, SAME, FINISH
+**Decision:** we kept the coffee counter. ASL Citizen covers most of the signs the Kaggle model doesn't know, and the personal model covers the rest, along with custom signs and phrases such as SURE, WANT, ANYTHING, ELSE, HELLO-HOW-ARE-YOU and HELP-ME.
 
 ## Gemini setup (signs to English)
 
@@ -197,6 +199,28 @@ After you press **Done** on a sentence, the app sends **only the sign words** (f
 3. Restart `npm run dev`.
 
 The model is `gemini-3.5-flash-lite` by default; set `GEMINI_MODEL=...` in `.env` to try another. The instructions to Gemini ([`server/translate.ts`](server/translate.ts)) keep it literal: no added meaning, alternatives when unsure, and a warning when the signs don't clearly form a sentence. Nothing is spoken until you press **Approve**.
+
+Examples from testing with a real key:
+
+| Signs | Gemini |
+| --- | --- |
+| `COFFEE HOT LARGE PLEASE` | "Can I have a large hot coffee, please?" |
+| `HELLO-HOW-ARE-YOU` | "Hello, how are you?" |
+| `MILK MORE` (question) | "Can I have more milk?" |
+| `HELLO COFFEE COFFEE SMALL` | "Hello, I would like a small coffee." |
+
+One alternative once added an unsigned "please", which is why the signer approval step matters.
+
+## ElevenLabs setup (speech and captions)
+
+Add these to `.env` and restart `npm run dev`:
+
+```
+ELEVENLABS_API_KEY=your-key-here
+ELEVENLABS_VOICE_ID=a-voice-id      # the voice used to speak approved messages
+```
+
+`ELEVENLABS_MODEL` defaults to `eleven_multilingual_v2`. The **Captions** and **Conversation** pages use realtime Scribe (`scribe_v2_realtime`) with a short-lived token from the backend, so the API key never reaches the browser. Audio goes to ElevenLabs only while captions are on, and nothing is stored.
 
 ## Backend API
 
@@ -327,18 +351,19 @@ steps.txt                            Step-by-step build log
 
 ## Technology
 
-- **Frontend:** Vite, React, TypeScript
+- **Frontend:** React 19, TypeScript, TanStack Start, Vite, Tailwind (built in Lovable)
 - **Camera / microphone:** Browser MediaDevices APIs
 - **Landmark tracking:** MediaPipe Tasks Vision (web), HolisticLandmarker (face, body, hands)
 - **Sign recognition:** 1st-place Kaggle model (TensorFlow Lite), run in the browser with [LiteRT.js](https://developers.google.com/edge/litert/web) (`@litertjs/core` 2.5.3, WASM)
 - **Second sign model:** ASL Citizen (ONNX), run in the browser with [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/) (`onnxruntime-web` 1.30.0, WASM)
 - **Model testing:** Python 3.11, ai-edge-litert, pandas, PyTorch, ONNX Runtime, MediaPipe
 - **Signs → English:** Gemini API (`@google/genai`, `gemini-3.5-flash-lite`), called from the dev server
-- **Speech-to-text:** ElevenLabs Realtime Speech-to-Text API (planned)
-- **Text-to-speech:** ElevenLabs Text-to-Speech API (planned)
+- **Third sign model:** personal calibration classifier on top of ASL Citizen's features, trained in Python and run in the browser
+- **Speech-to-text:** ElevenLabs realtime Scribe (`@elevenlabs/react`)
+- **Text-to-speech:** ElevenLabs Text-to-Speech API, streamed through the backend
 - **Backend:** standalone Node.js API server for Gemini translation, streamed ElevenLabs speech and temporary speech-to-text tokens
 
-MediaPipe provides tracking building blocks; it does not provide ASL translation. Recognition comes from the separate Kaggle model.
+MediaPipe provides tracking building blocks; it does not provide ASL translation. Recognition comes from the separate Kaggle, ASL Citizen and personal models.
 
 ## Credits
 
