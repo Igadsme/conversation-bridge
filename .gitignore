@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 dist-server
+
+# Old root web app (removed) - local leftovers
+/public/
 ._*
 *.local
 
@@ -36,15 +39,15 @@ kaggle/
 
 
 # Kaggle sign model + labels, copied by scripts/setup_model.sh (license not confirmed yet)
-public/models/sign_model.tflite
-public/models/sign_labels.json
+frontend/public/models/sign_model.tflite
+frontend/public/models/sign_labels.json
 
 # ASL Citizen weights, code and samples (research-only data, download yourself)
 asl-citizen/
 
 # ASL Citizen model + labels, copied by scripts/setup_model.sh (license: no redistribution)
-public/models/asl_citizen.onnx
-public/models/asl_citizen_labels.json
+frontend/public/models/asl_citizen.onnx
+frontend/public/models/asl_citizen_labels.json
 # Python cache files
 __pycache__/
 
@@ -52,5 +55,5 @@ __pycache__/
 data/personal/
 
 # Personal calibration model, copied by scripts/setup_model.sh (personal data)
-public/models/personal_model.json
+frontend/public/models/personal_model.json
 model-backups/

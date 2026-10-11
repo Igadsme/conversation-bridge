@@ -49,6 +49,8 @@ export default function CameraView({ onFrame }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState('Starting camera…')
+  // Which body parts are tracked in the latest frame, once tracking runs
+  const [tracked, setTracked] = useState<Record<string, boolean> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // STEP 4: the loop below starts once, so it reads onFrame through this ref
@@ -95,7 +97,7 @@ export default function CameraView({ onFrame }: Props) {
         const vision = await FilesetResolver.forVisionTasks(WASM_URL)
         landmarker = await createLandmarker(vision)
         if (cancelled) return stopAll()
-        setStatus('Tracking')
+        setStatus('')
 
         // 3. Render loop: track each new video frame and draw it
         const ctx = canvas.getContext('2d')!
@@ -131,15 +133,16 @@ export default function CameraView({ onFrame }: Props) {
             }
 
             // Show which parts are tracked; only re-render when it changes
-            const seen = (found: boolean) => (found ? '✓' : '✗')
-            const nextStatus =
-              `Face ${seen(result.faceLandmarks.length > 0)} · ` +
-              `Body ${seen(result.poseLandmarks.length > 0)} · ` +
-              `Left hand ${seen(result.leftHandLandmarks.length > 0)} · ` +
-              `Right hand ${seen(result.rightHandLandmarks.length > 0)}`
+            const parts = {
+              Face: result.faceLandmarks.length > 0,
+              Body: result.poseLandmarks.length > 0,
+              'Left hand': result.leftHandLandmarks.length > 0,
+              'Right hand': result.rightHandLandmarks.length > 0,
+            }
+            const nextStatus = JSON.stringify(parts)
             if (nextStatus !== lastStatus) {
               lastStatus = nextStatus
-              setStatus(nextStatus)
+              setTracked(parts)
             }
           }
 
@@ -162,11 +165,26 @@ export default function CameraView({ onFrame }: Props) {
 
   return (
     <div>
-      <div className="camera">
-        <video ref={videoRef} playsInline muted />
-        <canvas ref={canvasRef} />
+      <div className="camera-wrap">
+        <div className="camera">
+          <video ref={videoRef} playsInline muted />
+          <canvas ref={canvasRef} />
+        </div>
+        {/* Outside the mirrored .camera box, so the text reads normally */}
+        {!error && tracked && (
+          <ul className="camera-parts" aria-label="Tracking">
+            {Object.entries(tracked).map(([part, found]) => (
+              <li key={part} className={found ? 'found' : ''}>
+                <span aria-hidden />
+                {part}
+                <span className="sr-only">{found ? ' tracked' : ' not tracked'}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!error && !tracked && status && <p className="camera-loading">{status}</p>}
       </div>
-      <p className="camera-status">{error ?? status}</p>
+      {error && <p className="camera-error">{error}</p>}
     </div>
   )
 }

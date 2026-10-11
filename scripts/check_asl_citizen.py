@@ -23,7 +23,7 @@ from remotezip import RemoteZip
 
 ROOT = Path('asl-citizen')
 ZIP_URL = 'https://download.microsoft.com/download/b/8/8/b88c0bae-e6c1-43e1-8726-98cf5af36ca4/ASL_Citizen.zip'
-HOLISTIC_MODEL = 'public/models/holistic_landmarker.task'
+HOLISTIC_MODEL = 'frontend/public/models/holistic_landmarker.task'
 VIDEOS_PER_SIGN = 2
 MAX_FRAMES = 128
 

@@ -6,13 +6,19 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 
-export function Shell({ title, back = true, backTo = "/", action, children }: { title?: string; back?: boolean; backTo?: string; action?: ReactNode; children: ReactNode }) {
+// `wide`: camera pages use the whole screen of a laptop or tablet on the counter
+// `onBack`: a back button that changes state on the same page instead of navigating
+export function Shell({ title, back = true, backTo = "/", onBack, action, wide = false, children }: { title?: string; back?: boolean; backTo?: string; onBack?: () => void; action?: ReactNode; wide?: boolean; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background bg-page text-foreground">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-6 pt-3">
+      <div className={`mx-auto flex min-h-screen w-full flex-col px-4 pb-6 pt-3 ${wide ? "max-w-6xl" : "max-w-md"}`}>
         {title && (
           <header className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center py-2">
-            {back ? (
+            {back && onBack ? (
+              <button type="button" onClick={onBack} aria-label="Back" className="focus-ring grid h-11 w-11 place-items-center rounded-full hover:bg-muted">
+                <ChevronLeft className="h-6 w-6" aria-hidden />
+              </button>
+            ) : back ? (
               <Link to={backTo} aria-label="Back" className="focus-ring grid h-11 w-11 place-items-center rounded-full hover:bg-muted">
                 <ChevronLeft className="h-6 w-6" aria-hidden />
               </Link>
@@ -67,7 +73,9 @@ export function PrivacyDialog() {
         </DialogHeader>
         <ul className="space-y-3 text-sm">
           {[
-            "Camera and microphone are simulated in this prototype.",
+            "Camera video stays in this browser: signs are recognized on this device from body and hand points.",
+            "Only the sign words you finish are sent to Gemini to turn them into English.",
+            "Only English you approve is sent to ElevenLabs to be spoken. Microphone audio goes to ElevenLabs only while captions are on.",
             "No video or audio is recorded or stored.",
             "Sign interpretations may be incorrect; the signer reviews every message before it is spoken.",
             "This prototype does not provide unrestricted or reliable ASL translation.",

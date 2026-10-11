@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PrototypeNote, Shell } from "@/components/sora-ui";
+import { PrivacyDialog, PrototypeNote, Shell } from "@/components/sora-ui";
 import Recognizer from "@/recognizer";
 import "@/sora-tools.css";
 
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/sign")({
 
 function SignToSpeech() {
   return (
-    <Shell title="Sign to Speech">
+    <Shell title="Sign to Speech" action={<PrivacyDialog />} wide>
       {/* Real pipeline: camera → on-device recognition → sentence
           builder → Gemini translation → signer approval → speech */}
       <div className="sora-tools">

@@ -21,8 +21,8 @@ export const Route = createFileRoute("/record")({
 
 function PersonalTraining() {
   return (
-    <Shell title="Personal Training">
-      <p className="mt-2 text-sm text-muted-foreground">
+    <Shell title="Personal Training" wide>
+      <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-muted-foreground">
         Record your own signs (and everyday movements as "not a sign") so the
         personal model recognizes your signing. Only landmark points are saved —
         never video.

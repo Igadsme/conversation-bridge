@@ -46,9 +46,9 @@ Application architecture
 │  • Creates a temporary Scribe token                      │  │    │
 │  • Permanent API key never enters browser                │  │    │
 │                                                          │  │    │
-│  POST /api/interpret ─────────────────────────────────────┘  │    │
-│  • Receives intent candidates and conversation context       │    │
-│  • Returns ranked natural-language suggestions               │    │
+│  POST /api/translate (Gemini) ────────────────────────────┘  │    │
+│  • Receives the approved sign words (gloss) only             │    │
+│  • Returns a literal English sentence + alternatives         │    │
 │  • Does not receive raw video                                │    │
 │                                                              │    │
 │  POST /api/elevenlabs/speech ◀────────────────────────────────┘    │
@@ -59,6 +59,6 @@ Application architecture
 │  Server secrets:                                                  │
 │  • ELEVENLABS_API_KEY                                             │
 │  • ELEVENLABS_VOICE_ID                                            │
-│  • Optional LLM_API_KEY                                           │
+│  • GEMINI_API_KEY                                                 │
 │                                                                   │
 └───────────────────────────────────────────────────────────────────┘

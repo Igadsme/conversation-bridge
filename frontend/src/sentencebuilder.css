@@ -1,12 +1,12 @@
 /* SENTENCE A - Sentence builder: chips, alternatives, Done */
 
 .sentence {
-  max-width: 760px;
-  margin: 16px auto;
-  padding: 16px 20px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
   border: 2px solid var(--violet);
   border-radius: 22px;
   background: var(--card);
+  box-shadow: 0 0 0 4px rgba(141, 108, 243, 0.12);
 }
 
 .sentence-chips {
@@ -24,7 +24,8 @@
 /* One sign in the sentence */
 .sentence-chip {
   display: inline-flex;
-  border: 1px solid rgba(127, 127, 127, 0.5);
+  border: 1px solid var(--border);
+  background: rgba(141, 108, 243, 0.14);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -67,10 +68,11 @@
 
 .sentence-alternatives button,
 .sentence-actions button {
+  min-height: 44px;
   font-size: 1rem;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(127, 127, 127, 0.5);
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -137,8 +139,8 @@
   text-align: left;
   font-size: 1.3rem;
   padding: 12px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(127, 127, 127, 0.5);
+  border-radius: 16px;
+  border: 1px solid var(--border);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -152,11 +154,11 @@
 }
 
 .translation-warning {
-  color: #b26a00;
+  color: #f2c46d;
 }
 
 .translation-error {
-  color: crimson;
+  color: var(--danger);
 }
 
 .translation-error button {
@@ -167,4 +169,35 @@
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0 0 4px;
+}
+
+/* SENTENCE D - the one button that speaks for the signer */
+.speak-button {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 12px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--violet), #5b46c9);
+  box-shadow: 0 10px 30px -12px var(--violet);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.speak-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.translation-error button {
+  min-height: 36px;
+  padding: 4px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
 }

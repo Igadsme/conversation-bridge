@@ -1,51 +1,100 @@
 /* STEP 4 - Styles for the sign recorder (banner + controls) */
 
-/* Big status line: countdown, recording, or the last result */
+/* Big status line: waiting, recording, or the last result */
 .recorder-banner {
+  margin: 16px 0;
   text-align: center;
-  font-size: 2rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.25;
   min-height: 2.5rem;
 }
 
-.recorder-banner.countdown { color: #e6a700; }
-.recorder-banner.recording { color: crimson; }
+.recorder-banner.countdown { color: #f2c46d; }
+.recorder-banner.recording { color: var(--danger); }
 
 .recorder-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: center;
   align-items: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
+}
+
+.recorder-controls label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .recorder-controls select,
+.recorder-controls input,
 .recorder-controls button {
-  font-size: 1.1rem;
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.recorder-controls button {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.recorder-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Start / Pause: the main action */
+.recorder-controls .recorder-start {
+  background: var(--violet);
+  border-color: var(--violet);
+  color: #fff;
+}
+
+.recorder-controls .recorder-start[aria-pressed='true'] {
+  background: var(--danger);
+  border-color: var(--danger);
 }
 
 /* PERSONAL CALIBRATION 1 - overall progress under the controls */
 .recorder-progress {
   text-align: center;
-  opacity: 0.75;
-  margin-top: 12px;
+  color: var(--muted);
+  margin-top: 16px;
 }
 
 /* CUSTOM SIGNS - add your own word or phrase */
 .recorder-custom {
-  margin-top: 12px;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Label above its text box, Add button lined up with the box */
+.recorder-custom label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .recorder-custom input {
-  font-size: 1.1rem;
-  padding: 8px 10px;
-  min-width: 16rem;
+  min-width: min(16rem, 100%);
+  border-radius: 14px;
 }
 
 /* The label it will be saved as, e.g. HELLO-HOW-ARE-YOU */
 .recorder-preview {
   font-weight: 700;
-  opacity: 0.8;
+  color: var(--muted);
 }

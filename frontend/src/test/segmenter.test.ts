@@ -17,7 +17,7 @@ const frame = () => new Float32Array(543 * 3).fill(0.5);
 const idle = (n: number) => Array.from({ length: n }, () => [frame(), false] as const);
 const up = (n: number) => Array.from({ length: n }, () => [frame(), true] as const);
 
-function run(frames: Array<[Float32Array, boolean]>): SignClip[] {
+function run(frames: ReadonlyArray<readonly [Float32Array, boolean]>): SignClip[] {
   const segmenter = new Segmenter();
   const clips: SignClip[] = [];
   for (const [f, hands] of frames) {

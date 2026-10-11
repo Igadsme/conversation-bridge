@@ -16,8 +16,8 @@
   --danger: #eb5d70;
 
   box-sizing: border-box;
-  width: min(100%, 760px);
-  margin: 24px auto 0;
+  width: 100%;
+  margin: 16px auto 0;
   padding: 20px clamp(14px, 3vw, 28px) 30px;
   color-scheme: dark;
   color: var(--text);
@@ -28,7 +28,8 @@
   border: 1px solid var(--border);
   border-radius: 32px;
   box-shadow: 0 24px 60px -30px #000;
-  font: 17px/1.45 system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -53,6 +54,7 @@
 .sora-tools h2,
 .sora-tools h3 {
   color: var(--text-h);
+  font-family: var(--font-display);
 }
 
 @keyframes soft-pulse {
@@ -80,11 +82,7 @@
   .sora-tools {
     padding-inline: 12px;
   }
-  .sora-tools .recognizer-cards {
-    grid-template-columns: 1fr;
-  }
-  .sora-tools .recognizer-guess {
-    grid-template-columns: 6.3rem 1fr 2.8rem;
-    font-size: 0.95rem;
+  .sora-tools .recognizer-main {
+    font-size: 2rem;
   }
 }

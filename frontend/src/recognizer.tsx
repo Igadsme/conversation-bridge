@@ -90,7 +90,14 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
   const [results, setResults] = useState<Results>({})
   // SENTENCE A: the sentence being built, and whether Done was pressed
   const [chips, setChips] = useState<Chip[]>([])
-  const [sentenceDone, setSentenceDone] = useState(false)
+  const [sentenceDone, setSentenceDoneState] = useState(false)
+  // Also kept in a ref: predictions finish asynchronously in the queue below,
+  // and must see Done pressed after their clip was cut, not the value from then
+  const sentenceDoneRef = useRef(false)
+  function setSentenceDone(done: boolean) {
+    sentenceDoneRef.current = done
+    setSentenceDoneState(done)
+  }
   const nextChipId = useRef(1)
   const segmenterRef = useRef(new Segmenter())
   // The last clip, so changing a switch can re-rank it straight away
@@ -182,7 +189,7 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
   // when the same sign was just added (see REPEAT_WINDOW_MS). Tapping a guess
   // in the model cards is always allowed - that is explicit intent.
   function addChip(sign: string, alternatives: string[], from: string, automatic = false) {
-    if (sentenceDone) return
+    if (sentenceDoneRef.current) return
     if (automatic) {
       const last = lastAddedRef.current
       if (last && last.sign === sign && Date.now() - last.at < REPEAT_WINDOW_MS) {
@@ -217,128 +224,143 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
   const unsure = !main || main.probability < UNSURE_BELOW
   const loadingIds = activeIds.filter((id) => !models[id] && !errors[id])
 
+  const shownCards = activeIds.filter((id) => results[id] && models[id])
+
   return (
-    <div>
-      <CameraView onFrame={handleFrame} />
+    <div className="recognizer">
+      {/* Left on wide screens: what the camera sees and the current answer */}
+      <div className="recognizer-stage">
+        <CameraView onFrame={handleFrame} />
 
-      <p className={`recognizer-state ${signing ? 'signing' : ''}`}>
-        {loadingIds.length > 0
-          ? `Loading ${loadingIds.map((id) => MODEL_INFO[id].label).join(' and ')} model…`
-          : !ready
-            ? 'No sign model could be loaded'
-            : signing
-              ? '● Watching your sign…'
-              : 'Raise your hands, sign, then lower them out of view'}
-      </p>
-      {notice && <p className="recognizer-note" role="status">{notice}</p>}
-      {activeIds.map((id) =>
-        errors[id] ? (
-          <p key={id} className="recognizer-meta">
-            {MODEL_INFO[id].label}: {errors[id]}
-          </p>
-        ) : null,
-      )}
-      {errors.kaggle && choice === 'both' && (
-        <p className="recognizer-meta">
-          Combined mode still answers with ASL Citizen and Personal. Run sh scripts/setup_model.sh to add the Kaggle model.
+        <p className={`recognizer-state ${signing ? 'signing' : ''}`} role="status">
+          <span className="recognizer-dot" aria-hidden />
+          {loadingIds.length > 0
+            ? `Loading ${loadingIds.map((id) => MODEL_INFO[id].label).join(' and ')} model…`
+            : !ready
+              ? 'No sign model could be loaded'
+              : signing
+                ? 'Watching your sign…'
+                : 'Raise your hands, sign, then lower them out of view'}
         </p>
-      )}
+        {notice && <p className="recognizer-note" role="status">{notice}</p>}
+        {activeIds.map((id) =>
+          errors[id] ? (
+            <p key={id} className="recognizer-error">
+              {MODEL_INFO[id].label}: {errors[id]}
+            </p>
+          ) : null,
+        )}
+        {errors.kaggle && choice === 'both' && (
+          <p className="recognizer-meta">
+            Combined mode still answers with ASL Citizen and Personal. Run sh scripts/setup_model.sh to add the Kaggle model.
+          </p>
+        )}
 
-      <nav className="recognizer-scope" aria-label="Model">
-        <span>Model:</span>
-        {(['both', 'kaggle', 'citizen', 'personal'] as Choice[]).map((c) => (
-          <button key={c} aria-pressed={choice === c} onClick={() => change(c, scope)}>
-            {c === 'both' ? 'Combined' : MODEL_INFO[c].label}
-          </button>
-        ))}
-      </nav>
-      <nav className="recognizer-scope" aria-label="Compare with">
-        <span>Compare with:</span>
-        <button aria-pressed={scope === 'all'} onClick={() => change(choice, 'all')}>
-          All signs
-        </button>
-        <button aria-pressed={scope === 'vocab'} onClick={() => change(choice, 'vocab')}>
-          Our vocabulary
-        </button>
-      </nav>
-
-      {main && (
-        <h2 className="recognizer-main" aria-live="polite">
-          {unsure
-            ? 'Not sure — try again or fingerspell'
-            : `${main.name}${choice === 'both' ? ` (${MODEL_INFO[main.id].label})` : ''}`}
-        </h2>
-      )}
-
-      <div className="recognizer-cards">
-        {activeIds.map((id) => {
-          const p = results[id]
-          const model = models[id]
-          if (!p || !model) return null
-          const best = p.guesses[0]
-          return (
-            <section key={id} className="recognizer-result">
-              <h3>
-                {MODEL_INFO[id].label} · {model.knownSigns.length} signs
-              </h3>
-              <ol>
-                {p.guesses.map((g) => {
-                  const name = displayName(id, g.sign)
-                  return (
-                    <li key={g.sign}>
-                      {/* SENTENCE A: tap a guess to add it to the sentence */}
-                      <button
-                        className="recognizer-guess"
-                        onClick={() => addChip(name, alternativesFor(results, name), MODEL_INFO[id].label)}
-                        disabled={sentenceDone || name === NOT_A_SIGN}
-                        title={`Add ${name} to the sentence`}
-                      >
-                        <span className="recognizer-sign">{name}</span>
-                        <span className="recognizer-bar">
-                          <span style={{ width: `${Math.round(g.probability * 100)}%` }} />
-                        </span>
-                        <span className="recognizer-pct">{Math.round(g.probability * 100)}%</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ol>
-              <p className="recognizer-meta">
-                {/* Only worth saying when the overall best isn't already the top guess */}
-                {p.bestOverall.sign !== best?.sign &&
-                  `Best of all: ${displayName(id, p.bestOverall.sign)} (${Math.round(p.bestOverall.probability * 100)}%) · `}
-                {p.ms} ms
-              </p>
-            </section>
-          )
-        })}
+        {main && (
+          <h2 className={`recognizer-main ${unsure ? 'unsure' : ''}`} aria-live="polite">
+            {unsure ? 'Not sure — try again or fingerspell' : main.name}
+            {!unsure && choice === 'both' && <small>{MODEL_INFO[main.id].label}</small>}
+          </h2>
+        )}
       </div>
 
-      <SentenceBuilder
-        chips={chips}
-        done={sentenceDone}
-        onSwap={swapChip}
-        onRemove={(chipId) => setChips((prev) => prev.filter((c) => c.id !== chipId))}
-        onClear={clearSentence}
-        onDone={() => setSentenceDone(true)}
-        onEdit={() => setSentenceDone(false)}
-        onApproved={onApprovedSentence}
-      />
+      {/* Right on wide screens: the sentence, then every guess to pick from */}
+      <div className="recognizer-panel">
+        <SentenceBuilder
+          chips={chips}
+          done={sentenceDone}
+          onSwap={swapChip}
+          onRemove={(chipId) => setChips((prev) => prev.filter((c) => c.id !== chipId))}
+          onClear={clearSentence}
+          onDone={() => setSentenceDone(true)}
+          onEdit={() => setSentenceDone(false)}
+          onApproved={onApprovedSentence}
+        />
 
-      {activeIds.map((id) => {
-        const model = models[id]
-        if (!model) return null
-        const covered = coverage(id, model)
-        // CUSTOM SIGNS: the personal model can also know your own words and phrases
-        const own = id === 'personal' ? model.knownSigns.filter((s) => !VOCABULARY.includes(s) && s !== NOT_A_SIGN) : []
-        return (
-          <p key={id} className="recognizer-meta">
-            {MODEL_INFO[id].label} knows {covered.length} of our {VOCABULARY.length} signs
-            {covered.length < VOCABULARY.length && `: ${covered.join(', ')}`}
-            {own.length > 0 && ` + your own: ${own.join(', ')}`}
-          </p>
-        )
-      })}
+        {shownCards.length > 0 && (
+          <>
+            <p className="recognizer-hint">Wrong sign? Tap a guess to add it instead.</p>
+            <div className="recognizer-cards">
+              {shownCards.map((id) => {
+                const p = results[id]!
+                const model = models[id]!
+                const best = p.guesses[0]
+                return (
+                  <section key={id} className="recognizer-result">
+                    <h3>
+                      {MODEL_INFO[id].label} · {model.knownSigns.length} signs
+                    </h3>
+                    <ol>
+                      {p.guesses.map((g) => {
+                        const name = displayName(id, g.sign)
+                        return (
+                          <li key={g.sign}>
+                            {/* SENTENCE A: tap a guess to add it to the sentence */}
+                            <button
+                              className="recognizer-guess"
+                              onClick={() => addChip(name, alternativesFor(results, name), MODEL_INFO[id].label)}
+                              disabled={sentenceDone || name === NOT_A_SIGN}
+                              title={`Add ${name} to the sentence`}
+                            >
+                              <span className="recognizer-sign">{name}</span>
+                              <span className="recognizer-bar">
+                                <span style={{ width: `${Math.round(g.probability * 100)}%` }} />
+                              </span>
+                              <span className="recognizer-pct">{Math.round(g.probability * 100)}%</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ol>
+                    <p className="recognizer-meta">
+                      {/* Only worth saying when the overall best isn't already the top guess */}
+                      {p.bestOverall.sign !== best?.sign &&
+                        `Best of all: ${displayName(id, p.bestOverall.sign)} (${Math.round(p.bestOverall.probability * 100)}%) · `}
+                      {p.ms} ms
+                    </p>
+                  </section>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Model choice and coverage: useful for the team, noise for the signer */}
+        <details className="recognizer-advanced">
+          <summary>Recognition settings</summary>
+          <div className="recognizer-scope" role="group" aria-label="Model">
+            <span>Model</span>
+            {(['both', 'kaggle', 'citizen', 'personal'] as Choice[]).map((c) => (
+              <button key={c} aria-pressed={choice === c} onClick={() => change(c, scope)}>
+                {c === 'both' ? 'Combined' : MODEL_INFO[c].label}
+              </button>
+            ))}
+          </div>
+          <div className="recognizer-scope" role="group" aria-label="Compare with">
+            <span>Compare with</span>
+            <button aria-pressed={scope === 'all'} onClick={() => change(choice, 'all')}>
+              All signs
+            </button>
+            <button aria-pressed={scope === 'vocab'} onClick={() => change(choice, 'vocab')}>
+              Our vocabulary
+            </button>
+          </div>
+          {activeIds.map((id) => {
+            const model = models[id]
+            if (!model) return null
+            const covered = coverage(id, model)
+            // CUSTOM SIGNS: the personal model can also know your own words and phrases
+            const own = id === 'personal' ? model.knownSigns.filter((s) => !VOCABULARY.includes(s) && s !== NOT_A_SIGN) : []
+            return (
+              <p key={id} className="recognizer-meta">
+                {MODEL_INFO[id].label} knows {covered.length} of our {VOCABULARY.length} signs
+                {covered.length < VOCABULARY.length && `: ${covered.join(', ')}`}
+                {own.length > 0 && ` + your own: ${own.join(', ')}`}
+              </p>
+            )
+          })}
+        </details>
+      </div>
     </div>
   )
 }
