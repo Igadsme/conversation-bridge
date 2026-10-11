@@ -100,7 +100,9 @@ The **Record** mode records the demo signer's own examples, used to train a smal
 1. Pick a sign from the dropdown and press **Space** (or **Start**).
 2. Sign it, then lower your hands out of view. Repeat. Each sign is saved automatically, up to 15.
 3. Also record **NOT-A-SIGN**: everyday movements like scratching your head or waving, so the model learns when to say "not sure".
-4. Click **Download** after each sign and save the file into `data/personal/`.
+4. Click **Train my model**. It trains on every recording in this browser, in about 10 seconds for 350 clips, then shows how many held-back clips it got right and which signs get mixed up. The model is saved in the browser, and **Personal** and **Combined** on the Sign to Speech page use it right away.
+
+Recordings and the model are kept in this browser (IndexedDB) and never leave the device. Clearing the site's data removes them, so use **Download backup** now and then. **Import files** loads downloaded files back, including the ones in `data/personal/`. **Delete all** removes every recording and the model from the browser.
 
 **Your own words and phrases:** type one into **Add your own word or phrase**, for example `hello how are you`, and it becomes a label (`HELLO-HOW-ARE-YOU`) in the dropdown, remembered in this browser. Sign a phrase in one go, without lowering your hands in the middle, so each one is saved as a single clip. After training, the personal model recognizes it as one unit, and Gemini translates it as the phrase ("Hello, how are you?").
 
@@ -108,11 +110,11 @@ Clips are cut exactly the way the Recognize page cuts them, so the training data
 
 Only body and hand points are saved, never video. `data/personal/` is git-ignored because it's personal data. Get permission before recording anyone else.
 
-**Training:** `python scripts/train_personal.py` (in the `asl-ml` env) reads every file in `data/personal/`, runs each clip through ASL Citizen to get its 256-number description, and trains a small classifier on those for your signs. With the current 23 labels (346 unique clips, including the custom phrases HELLO-HOW-ARE-YOU and HELP-ME), clips held back from training are recognized 98% of the time, against 47% for ASL Citizen alone among the same labels. The most common mix-ups are HELP-ME → HELP and ANYTHING → ELSE. Duplicate clips (same sign and recording time) are skipped. Those test clips come from the same recording sessions, so record in demo conditions. The result is saved to `data/personal/personal_model.json`.
+**Training in Python (optional):** the in-app trainer ([`frontend/src/trainer.ts`](frontend/src/trainer.ts)) uses the same recipe; on the 346 clips below it got 99% on held-back clips. To train with Python instead, save the downloaded files into `data/personal/` and run `python scripts/train_personal.py` (in the `asl-ml` env). It reads every file in `data/personal/`, runs each clip through ASL Citizen to get its 256-number description, and trains a small classifier on those for your signs. With the current 23 labels (346 unique clips, including the custom phrases HELLO-HOW-ARE-YOU and HELP-ME), clips held back from training are recognized 98% of the time, against 47% for ASL Citizen alone among the same labels. The most common mix-ups are HELP-ME → HELP and ANYTHING → ELSE. Duplicate clips (same sign and recording time) are skipped. Those test clips come from the same recording sessions, so record in demo conditions. The result is saved to `data/personal/personal_model.json`.
 
-**In the app:** run `sh scripts/setup_model.sh` to copy the trained model into `frontend/public/models/` (git-ignored), then pick **Personal** or **Combined** on the Recognize page. Personal reuses ASL Citizen's description of each clip, so it adds no noticeable time. In **Combined**, the personal answer is shown when it's at least 70% sure; otherwise the app falls back to Kaggle and ASL Citizen, so signs you haven't recorded still work. Until **NOT-A-SIGN** is recorded, the personal model always picks one of the recorded signs, which is why it needs to be that sure.
+**In the app:** a model trained in the browser is used first. Otherwise, run `sh scripts/setup_model.sh` to copy the Python-trained model into `frontend/public/models/` (git-ignored). Then pick **Personal** or **Combined** on the Recognize page. Personal reuses ASL Citizen's description of each clip, so it adds no noticeable time. In **Combined**, the personal answer is shown when it's at least 70% sure; otherwise the app falls back to Kaggle and ASL Citizen, so signs you haven't recorded still work. Until **NOT-A-SIGN** is recorded, the personal model always picks one of the recorded signs, which is why it needs to be that sure.
 
-After recording more signs: `python scripts/train_personal.py`, then `sh scripts/setup_model.sh`, then refresh the page.
+After recording more signs, click **Train again** (or, with Python: `python scripts/train_personal.py`, then `sh scripts/setup_model.sh`, then refresh the page).
 
 ## Sign recognition model
 
@@ -328,6 +330,9 @@ frontend/src/recognizer.tsx / .css   Live recognition, top 3 guesses per model
 frontend/src/sentencebuilder.tsx     Builds a sentence from recognized signs before translation
 frontend/src/translationpanel.tsx    Shows Gemini's English options; the signer approves one
 frontend/src/recorder.tsx / .css     Records the signer's own examples (personal calibration)
+frontend/src/trainingpanel.tsx       "Train my model": trains the personal model in the browser
+frontend/src/trainer.ts              The training math (same recipe as scripts/train_personal.py)
+frontend/src/clipstore.ts            Keeps recordings and the trained model in the browser (IndexedDB)
 frontend/src/signs.ts                Vocabulary and recording data types
 frontend/public/models/              On-device models (git-ignored, filled by scripts/setup_model.sh)
 scripts/setup_model.sh               Puts the models into frontend/public/models/
