@@ -6,7 +6,7 @@ import "@/sora-tools.css";
 export const Route = createFileRoute("/sign")({
   head: () => ({
     meta: [
-      { title: "Sign to Speech — Sora" },
+      { title: "Sora — Bridging Conversations" },
       { name: "description", content: "Sign, review the possible message, then have Sora speak it aloud." },
       { property: "og:title", content: "Sign to Speech — Sora" },
       { property: "og:description", content: "Review every sign suggestion before it's spoken." },

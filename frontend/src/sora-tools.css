@@ -1,7 +1,7 @@
 /* Dark tool surface for the on-device sign pipeline components
    (CameraView, Recognizer, SentenceBuilder, TranslationPanel, Recorder),
    ported from the original Vite app. Scoped under .sora-tools so the
-   Lovable light theme (styles.css) stays intact everywhere else.
+   Base application theme (styles.css) stays intact everywhere else.
    The CSS variables below are the ones those components expect. */
 
 .sora-tools {

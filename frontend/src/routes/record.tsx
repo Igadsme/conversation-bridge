@@ -6,7 +6,7 @@ import "@/sora-tools.css";
 export const Route = createFileRoute("/record")({
   head: () => ({
     meta: [
-      { title: "Personal Training — Sora" },
+      { title: "Sora — Bridging Conversations" },
       { name: "description", content: "Record your own signs to calibrate the on-device recognizer." },
       { property: "og:title", content: "Personal Training — Sora" },
       { property: "og:description", content: "Record your own signs for a personal calibration model." },

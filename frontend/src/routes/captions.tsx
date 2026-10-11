@@ -9,7 +9,7 @@ import { loadSettings, saveSettings, SETTINGS_EVENT, type SoraSettings } from "@
 export const Route = createFileRoute("/captions")({
   head: () => ({
     meta: [
-      { title: "Speech to Text — Sora" },
+      { title: "Sora — Bridging Conversations" },
       { name: "description", content: "Large, readable live captions of what the hearing person says." },
       { property: "og:title", content: "Speech to Text — Sora" },
       { property: "og:description", content: "Large, readable live captions." },

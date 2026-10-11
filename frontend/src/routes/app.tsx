@@ -4,7 +4,10 @@ import { ChevronRight, Hand, HelpCircle, MessagesSquare, Mic, Settings, Users } 
 import { PrivacyDialog, Shell, SoraMark } from "@/components/sora-ui";
 import { checkHealth, type ServiceHealth } from "@/lib/relay-services";
 
-export const Route = createFileRoute("/app")({ component: AppDashboard });
+export const Route = createFileRoute("/app")({
+  head: () => ({ meta: [{ title: "Sora — Bridging Conversations" }] }),
+  component: AppDashboard,
+});
 
 const modes = [
   { to: "/sign", title: "Sign to Speech", desc: "Show your signs, we'll speak for you", Icon: Hand, bg: "bg-grad-violet" },

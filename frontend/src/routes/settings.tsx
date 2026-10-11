@@ -5,7 +5,7 @@ import { Shell } from '@/components/sora-ui'
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type CaptionSize, type SoraSettings } from '@/lib/settings'
 
 export const Route = createFileRoute('/settings')({
-  head: () => ({ meta: [{ title: 'Settings — Sora' }, { name: 'description', content: 'Personalize Sora for your conversation.' }] }),
+  head: () => ({ meta: [{ title: 'Sora — Bridging Conversations' }, { name: 'description', content: 'Personalize Sora for your conversation.' }] }),
   component: Settings,
 })
 

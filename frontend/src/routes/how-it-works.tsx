@@ -3,7 +3,7 @@ import { ArrowRight, Camera, CheckCircle2, MessageCircle, Mic, Volume2 } from 'l
 import { Shell } from '@/components/sora-ui'
 
 export const Route = createFileRoute('/how-it-works')({
-  head: () => ({ meta: [{ title: 'How Sora Works — Sora' }, { name: 'description', content: 'Learn how Sora supports two-way conversations.' }] }),
+  head: () => ({ meta: [{ title: 'Sora — Bridging Conversations' }, { name: 'description', content: 'Learn how Sora supports two-way conversations.' }] }),
   component: HowItWorks,
 })
 

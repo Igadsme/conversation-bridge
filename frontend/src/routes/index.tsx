@@ -4,7 +4,7 @@ import { ArrowRight, Check, Hand, MessageCircle, Mic, Sparkles, Users } from "lu
 import { SoraMark } from "@/components/sora-ui";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Sora — Every conversation deserves to be heard" }, { name: "description", content: "Sora is a conversation aid for sign to speech, speech to text, and face-to-face communication." }] }),
+  head: () => ({ meta: [{ title: "Sora — Bridging Conversations" }, { name: "description", content: "Sora is a conversation aid for sign to speech, speech to text, and face-to-face communication." }] }),
   component: LandingPage,
 });
 

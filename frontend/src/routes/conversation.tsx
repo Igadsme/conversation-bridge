@@ -11,7 +11,7 @@ import "@/sora-tools.css";
 export const Route = createFileRoute("/conversation")({
   head: () => ({
     meta: [
-      { title: "Conversation Mode — Sora" },
+      { title: "Sora — Bridging Conversations" },
       { name: "description", content: "A two-way conversation: signed replies reviewed before speaking, spoken replies shown as captions." },
       { property: "og:title", content: "Conversation Mode — Sora" },
       { property: "og:description", content: "Two-way conversation with review-before-speaking." },

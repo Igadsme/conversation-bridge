@@ -35,7 +35,7 @@ import "@/sora-tools.css";
 export const Route = createFileRoute("/face-to-face")({
   head: () => ({
     meta: [
-      { title: "Face to Face — Sora" },
+      { title: "Sora — Bridging Conversations" },
       {
         name: "description",
         content:
