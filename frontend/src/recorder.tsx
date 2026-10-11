@@ -125,7 +125,7 @@ export default function Recorder() {
     const done = count + 1
     if (done >= TARGET) {
       setArmed(false)
-      setMessage(`${sign}: ${done}/${TARGET} done. Download, then pick the next sign.`)
+      setMessage(`${sign}: ${done}/${TARGET} done. Pick the next sign, or train your model below.`)
     } else {
       setMessage(`Saved ${sign} #${done} (${length} frames). Again!`)
     }

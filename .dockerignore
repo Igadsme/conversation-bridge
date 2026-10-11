@@ -1,0 +1,6 @@
+**/node_modules
+**/.output
+dist
+dist-server
+.env*
+frontend/public/models

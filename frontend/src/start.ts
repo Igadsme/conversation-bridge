@@ -33,6 +33,41 @@ const apiProxyMiddleware = createMiddleware().server(async ({ request, next }) =
   return response;
 });
 
+// Password for a hosted demo: when SORA_PASSWORD is set, every page, /api/*
+// and /models/* asks for it (browser sign-in box, any username). The built
+// JS/CSS stay open - they're the public repo's code anyway.
+const passwordMiddleware = createMiddleware().server(async ({ request, next }) => {
+  const password = process.env.SORA_PASSWORD;
+  if (!password) return next();
+  const header = request.headers.get("authorization") ?? "";
+  const given = header.startsWith("Basic ") ? atob(header.slice(6)).split(":").slice(1).join(":") : null;
+  if (given === password) return next();
+  return new Response("Password required", {
+    status: 401,
+    headers: { "www-authenticate": 'Basic realm="Sora demo", charset="UTF-8"' },
+  });
+});
+
+// Hosted demo models: served from SORA_MODELS_DIR (outside public/, so only
+// behind the password above). Locally, Vite serves public/models instead.
+const modelsMiddleware = createMiddleware().server(async ({ request, next }) => {
+  const dir = process.env.SORA_MODELS_DIR;
+  const name = new URL(request.url).pathname.match(/^\/models\/([\w.-]+)$/)?.[1];
+  if (!dir || !name) return next();
+  const { readFile } = await import("node:fs/promises");
+  try {
+    const body = await readFile(`${dir}/${name}`);
+    return new Response(body, {
+      headers: {
+        "content-type": name.endsWith(".json") ? "application/json" : "application/octet-stream",
+        "cache-control": "private, max-age=86400",
+      },
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+});
+
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
@@ -56,5 +91,5 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [apiProxyMiddleware, errorMiddleware, csrfMiddleware],
+  requestMiddleware: [passwordMiddleware, modelsMiddleware, apiProxyMiddleware, errorMiddleware, csrfMiddleware],
 }));

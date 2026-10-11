@@ -103,6 +103,14 @@ export default function TrainingPanel({ ready, disabled }: Props) {
         </button>
       </div>
 
+      {!busy && (disabled || ready < 2) && (
+        <p className="trainer-note">
+          {disabled
+            ? 'Pause recording (Space) to train.'
+            : `To train, record at least ${MIN_EXAMPLES} examples of ${ready === 0 ? '2 signs' : 'one more sign'} - the model learns to tell your signs apart. Or use Import files to load earlier recordings.`}
+        </p>
+      )}
+
       {busy && (
         <div className="trainer-progress" role="status">
           <progress value={progress} max={1} />

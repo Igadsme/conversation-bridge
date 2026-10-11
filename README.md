@@ -261,6 +261,8 @@ npm run build && npm start            # backend (API only)
 npm --prefix frontend run build       # web app; set SORA_API_UPSTREAM to the backend's URL
 ```
 
+**Hosted demo (Railway, password-protected):** the `Dockerfile` runs the backend and the web app in one container. `sh scripts/deploy_railway.sh` uploads the committed code plus the git-ignored models (as `deploy-models/`, never committed); uncommitted changes aren't deployed. On Railway, set `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` and `SORA_PASSWORD`. With `SORA_PASSWORD` set, every page, `/api/*` and `/models/*` asks for it (any username). Note the ASL Citizen license above: hosting it needs Microsoft's permission.
+
 `npm test` runs backend route tests with mocked external services, so it does
 not consume Gemini or ElevenLabs credits. `npm --prefix frontend test` runs the
 web app's tests.
