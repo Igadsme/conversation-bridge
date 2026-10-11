@@ -61,3 +61,25 @@ export type PersonalClip = {
   end: number // frame where the sign itself ends (exclusive)
   frames: (number | null)[][]
 }
+
+// Where each part of a recorded frame sits in the app's 543-point frame (see landmarks.ts)
+export const COMPACT_PARTS = [
+  { start: 489, count: 33 }, // pose
+  { start: 468, count: 21 }, // left hand
+  { start: 522, count: 21 }, // right hand
+]
+
+// One clip's identity: the same sign recorded at the same time is the same clip
+export const clipKey = (clip: PersonalClip) => `${clip.sign}|${clip.recordedAt}`
+
+// Checks a clip read from a downloaded file before it's stored or trained on
+export function isPersonalClip(value: unknown): value is PersonalClip {
+  const c = value as PersonalClip
+  return (
+    typeof c === 'object' && c !== null &&
+    typeof c.sign === 'string' && toSignName(c.sign) === c.sign &&
+    typeof c.recordedAt === 'string' &&
+    Array.isArray(c.frames) && c.frames.length > 0 &&
+    c.frames.every((f) => Array.isArray(f) && f.length === 150)
+  )
+}
