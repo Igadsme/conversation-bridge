@@ -41,6 +41,7 @@ function Captions() {
 
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
+    onPartialTranscript: ({ text }) => setPartial(text.trim()),
     onCommittedTranscript: ({ text }) => {
       const clean = text.trim();
       if (!clean) return;

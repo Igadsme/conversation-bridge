@@ -135,6 +135,14 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
     }
   }, [])
 
+  // Do not leave the user in a mode whose model failed to load. Combined mode
+  // can still use the other local models, so only direct Kaggle selection falls
+  // back when its optional file is missing.
+  useEffect(() => {
+    if (choice !== 'kaggle' || !errors.kaggle) return
+    setChoice(models.citizen ? 'citizen' : models.personal ? 'personal' : 'both')
+  }, [choice, errors.kaggle, models.citizen, models.personal])
+
   const activeIds: ModelId[] = choice === 'both' ? ALL_MODELS : [choice]
   const ready = activeIds.some((id) => models[id])
 
@@ -255,6 +263,11 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
             Combined mode still answers with ASL Citizen and Personal. Run sh scripts/setup_model.sh to add the Kaggle model.
           </p>
         )}
+        {errors.kaggle && (
+          <p className="recognizer-error" role="alert">
+            Kaggle mode is unavailable because its sign model is missing. Use Combined or another local model.
+          </p>
+        )}
 
         {main && (
           <h2 className={`recognizer-main ${unsure ? 'unsure' : ''}`} aria-live="polite">
@@ -331,8 +344,8 @@ export default function RecognizerPage({ onApprovedSentence }: Props) {
           <div className="recognizer-scope" role="group" aria-label="Model">
             <span>Model</span>
             {(['both', 'kaggle', 'citizen', 'personal'] as Choice[]).map((c) => (
-              <button key={c} aria-pressed={choice === c} onClick={() => change(c, scope)}>
-                {c === 'both' ? 'Combined' : MODEL_INFO[c].label}
+              <button key={c} aria-pressed={choice === c} disabled={c === 'kaggle' && Boolean(errors.kaggle)} onClick={() => change(c, scope)}>
+                {c === 'both' ? 'Combined' : MODEL_INFO[c].label}{c === 'kaggle' && errors.kaggle ? ' (unavailable)' : ''}
               </button>
             ))}
           </div>
