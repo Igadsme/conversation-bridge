@@ -1,90 +1,48 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronRight, Hand, HelpCircle, Mic, Settings, Users } from "lucide-react";
-import { PrivacyDialog, Shell, SoraMark } from "@/components/sora-ui";
-import { checkHealth, type ServiceHealth } from "@/lib/relay-services";
+import type { ReactNode } from "react";
+import { ArrowRight, Check, Hand, MessageCircle, Mic, Sparkles, Users } from "lucide-react";
+import { SoraMark } from "@/components/sora-ui";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Sora — Bridging conversations" },
-      { name: "description", content: "Sora is a prototype conversation aid: sign to speech, speech to text, and a two-way conversation mode." },
-      { property: "og:title", content: "Sora — Bridging conversations" },
-      { property: "og:description", content: "Prototype conversation aid for Deaf signers and hearing people." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: Home,
+  head: () => ({ meta: [{ title: "Sora — Every conversation deserves to be heard" }, { name: "description", content: "Sora is a conversation aid for sign to speech, speech to text, and face-to-face communication." }] }),
+  component: LandingPage,
 });
 
-const modes = [
-  { to: "/sign", title: "Sign to Speech", desc: "Show your signs, we'll speak for you", Icon: Hand, bg: "bg-grad-violet" },
-  { to: "/captions", title: "Speech to Text", desc: "Speak and show text instantly", Icon: Mic, bg: "bg-grad-teal" },
-  { to: "/conversation", title: "Conversation Mode", desc: "Two-way communication in real time", Icon: Users, bg: "bg-grad-slate" },
-] as const;
+const features = [
+  { icon: Hand, title: "Sign to Speech", text: "Recognize supported signs, review the interpretation, and speak the text you approve." },
+  { icon: Mic, title: "Speech to Text", text: "Turn spoken conversation into readable captions with microphone input." },
+  { icon: Users, title: "Face-to-Face Mode", text: "Keep both sides of a conversation visible on one shared screen." },
+  { icon: Sparkles, title: "Personal Calibration", text: "Calibrate recognition for your own signs through the existing training flow." },
+];
 
-function ServiceBadge({ label, ready }: { label: string; ready: boolean }) {
-  return (
-    <span
-      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-        ready ? "border-teal-strong/40 bg-teal/10 text-teal-strong" : "border-border bg-muted/40 text-muted-foreground"
-      }`}
-    >
-      {label} {ready ? "ready" : "not configured"}
-    </span>
-  );
+function PreviewPanel({ label, text, icon }: { label: string; text: string; icon: ReactNode }) {
+  return <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4"><div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{icon}{label}</div><p className="mt-4 text-lg leading-relaxed text-white">{text}</p></div>;
 }
 
-function Home() {
-  const [health, setHealth] = useState<ServiceHealth | null>(null);
-
-  useEffect(() => {
-    checkHealth().then(setHealth).catch(() => setHealth(null));
-  }, []);
-
+function LandingPage() {
   return (
-    <Shell>
-      <div className="flex justify-between">
-        <span className="mt-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-semibold text-muted-foreground">Prototype</span>
-        <PrivacyDialog />
-      </div>
-      <div className="fade-up mt-8 flex flex-col items-center text-center">
-        <SoraMark className="h-12 w-20" />
-        <h1 className="mt-3 font-display text-5xl font-semibold tracking-tight">Sora</h1>
-        <p className="mt-3 max-w-xs text-muted-foreground">Bridging conversations for a more inclusive world.</p>
-      </div>
-      <nav aria-label="Modes" className="mt-10 space-y-4">
-        {modes.map(({ to, title, desc, Icon, bg }, i) => (
-          <Link key={to} to={to} style={{ animationDelay: `${0.08 * (i + 1)}s` }}
-            className={`fade-up focus-ring group flex items-center gap-4 rounded-3xl border border-border p-5 shadow-soft transition hover:-translate-y-0.5 hover:shadow-glow ${bg}`}>
-            <Icon className="h-10 w-10 shrink-0" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-lg font-semibold">{title}</p>
-              <p className="text-sm opacity-80">{desc}</p>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 transition group-hover:translate-x-1" aria-hidden />
-          </Link>
-        ))}
+    <main className="min-h-screen overflow-hidden bg-[#080a18] text-white selection:bg-violet-300/30">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[38rem] bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.23),transparent_62%)]" />
+      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-8" aria-label="Primary navigation">
+        <a href="#top" className="focus-ring flex items-center gap-3"><SoraMark className="h-8 w-12" /><span className="font-display text-xl font-semibold">Sora</span></a>
+        <div className="hidden items-center gap-8 text-sm text-slate-300 md:flex"><a className="hover:text-white" href="#features">Features</a><a className="hover:text-white" href="#how-it-works">How It Works</a><a className="hover:text-white" href="#mission">About</a></div>
+        <Link to="/app" className="focus-ring rounded-full bg-violet-300 px-4 py-2.5 text-sm font-semibold text-[#171326] transition hover:bg-violet-200">Launch App</Link>
       </nav>
-      <div className="mt-6 text-center">
-        <div className="flex justify-center gap-5 text-sm font-semibold">
-          <Link to="/settings" className="inline-flex items-center gap-1.5 text-primary underline underline-offset-4"><Settings className="h-4 w-4" aria-hidden />Settings</Link>
-          <Link to="/how-it-works" className="inline-flex items-center gap-1.5 text-primary underline underline-offset-4"><HelpCircle className="h-4 w-4" aria-hidden />How it works</Link>
-        </div>
-        <Link to="/record" className="mt-4 inline-block text-xs font-semibold text-muted-foreground underline underline-offset-4">
-          Personal training &amp; model calibration
-        </Link>
-      </div>
-      <div className="service-status mt-8 flex flex-wrap items-center justify-center gap-2" aria-live="polite">
-        <ServiceBadge label="Gemini" ready={health?.services.gemini ?? false} />
-        <ServiceBadge label="ElevenLabs" ready={health?.services.elevenlabs ?? false} />
-        {!health && <span className="text-xs text-muted-foreground">Backend unreachable — run the API server on port 3001</span>}
-      </div>
-      <p className="mt-4 text-center text-xs text-muted-foreground">Before starting, allow camera access for signing and microphone access for captions.</p>
-      <p className="mt-auto pt-6 text-center text-xs text-muted-foreground">
-        Sign recognition is limited and developing. Not a substitute for a qualified interpreter, especially in medical, legal, or emergency situations.
-      </p>
-    </Shell>
+
+      <section id="top" className="relative z-10 mx-auto grid max-w-7xl gap-16 px-5 pb-24 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:pb-32 lg:pt-24">
+        <div className="max-w-2xl"><p className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-violet-200"><span className="h-1.5 w-1.5 rounded-full bg-teal-300" />A conversation aid prototype</p><h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-[-0.04em] text-white sm:text-7xl">Every conversation deserves to be heard.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-slate-300 sm:text-xl">Sora helps Deaf signers and hearing people share a conversation through supported sign recognition, speech captions, and a face-to-face mode.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><Link to="/app" className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-violet-300 px-6 py-3.5 font-semibold text-[#171326] transition hover:bg-violet-200">Launch Sora <ArrowRight className="h-4 w-4" /></Link><a href="#how-it-works" className="focus-ring inline-flex items-center justify-center rounded-full border border-white/15 px-6 py-3.5 font-semibold text-white transition hover:bg-white/10">See How It Works</a></div><p className="mt-5 text-xs text-slate-500">No account required. Camera and microphone access are requested only when you use those features.</p></div>
+        <div className="relative"><div className="absolute -inset-8 rounded-[3rem] bg-violet-400/10 blur-3xl" /><div className="relative rounded-[2rem] border border-white/10 bg-[#11152b]/90 p-3 shadow-2xl shadow-violet-950/40"><div className="rounded-[1.5rem] border border-white/10 bg-[#0b0e20] p-5 sm:p-7"><div className="flex items-center justify-between border-b border-white/10 pb-5"><div className="flex items-center gap-2"><SoraMark className="h-6 w-10" /><span className="font-display font-semibold">Face to Face</span></div><span className="rounded-full bg-teal-300/10 px-2.5 py-1 text-xs text-teal-200">Ready</span></div><div className="grid gap-3 py-5 sm:grid-cols-2"><PreviewPanel label="Signer" icon={<Hand className="h-4 w-4 text-violet-300" />} text="I’d like a coffee, please." /><PreviewPanel label="Hearing speaker" icon={<MessageCircle className="h-4 w-4 text-teal-300" />} text="Of course — hot or iced?" /></div><div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-400"><span>Camera and microphone controls</span><span className="flex gap-1.5"><span className="h-2 w-2 rounded-full bg-violet-300" /><span className="h-2 w-2 rounded-full bg-teal-300" /></span></div></div></div></div>
+      </section>
+
+      <section id="features" className="relative z-10 mx-auto max-w-7xl scroll-mt-8 px-5 py-20 lg:px-8"><div className="max-w-2xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-300">Designed for the moment</p><h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-5xl">Tools that make room for understanding.</h2></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{features.map(({ icon: Icon, title, text }) => <article key={title} className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 transition hover:-translate-y-1 hover:bg-white/[0.07]"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-violet-300/10 text-violet-200"><Icon className="h-5 w-5" /></div><h3 className="mt-6 font-display text-xl font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-slate-400">{text}</p></article>)}</div></section>
+
+      <section id="how-it-works" className="relative z-10 mx-auto max-w-7xl scroll-mt-8 px-5 py-20 lg:px-8"><div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-violet-300/10 via-white/[0.03] to-teal-300/10 p-7 sm:p-12"><div className="max-w-2xl"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-200">How it works</p><h2 className="mt-4 font-display text-3xl font-semibold sm:text-5xl">A simple bridge between two people.</h2></div><div className="mt-12 grid gap-8 md:grid-cols-3">{[["01", "Choose a mode", "Start with signs, captions, or a shared face-to-face conversation."], ["02", "Review the moment", "Sora shows the interpretation so you can clarify or edit it before speaking."], ["03", "Keep talking", "Approved text can be spoken, while speech appears as readable captions."]].map(([number, title, text]) => <div key={number}><span className="font-display text-3xl text-violet-200">{number}</span><h3 className="mt-5 font-display text-xl font-semibold">{title}</h3><p className="mt-3 leading-7 text-slate-400">{text}</p></div>)}</div></div></section>
+
+      <section id="mission" className="relative z-10 mx-auto max-w-4xl scroll-mt-8 px-5 py-24 text-center lg:px-8"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-300">Our mission</p><h2 className="mt-5 font-display text-3xl font-semibold tracking-tight sm:text-5xl">Technology should help people meet each other halfway.</h2><p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-400">Sora is an accessibility-focused prototype built to support communication between Deaf signers and hearing people. It is designed for review, clarification, and human connection—not to replace interpreters or make promises beyond the capabilities of its current recognition models.</p><div className="mx-auto mt-7 flex max-w-md flex-wrap justify-center gap-3 text-sm text-slate-300"><span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-teal-300" />Review before speaking</span><span className="inline-flex items-center gap-2"><Check className="h-4 w-4 text-teal-300" />Privacy-minded by design</span></div></section>
+
+      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-24 lg:px-8"><div className="rounded-[2rem] bg-violet-300 px-6 py-14 text-center text-[#171326] sm:px-12"><h2 className="font-display text-3xl font-semibold sm:text-5xl">Start a conversation with Sora.</h2><p className="mx-auto mt-4 max-w-xl text-[#3a2d55]">Explore the existing conversation tools and find the mode that fits your moment.</p><Link to="/app" className="focus-ring mt-8 inline-flex items-center gap-2 rounded-full bg-[#171326] px-6 py-3.5 font-semibold text-white transition hover:bg-[#27203c]">Launch Sora <ArrowRight className="h-4 w-4" /></Link></div></section>
+
+      <footer className="relative z-10 mx-auto flex max-w-7xl flex-col gap-5 border-t border-white/10 px-5 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between lg:px-8"><div className="flex items-center gap-2"><SoraMark className="h-5 w-8" /><span>Sora</span></div><div className="flex gap-5"><a className="hover:text-white" href="#features">Features</a><a className="hover:text-white" href="#mission">About</a><Link className="hover:text-white" to="/how-it-works">How it works</Link><Link className="hover:text-white" to="/app">Launch app</Link></div></footer>
+    </main>
   );
 }

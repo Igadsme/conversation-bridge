@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as CaptionsRouteImport } from './routes/captions'
 import { Route as ConversationRouteImport } from './routes/conversation'
+import { Route as FaceToFaceRouteImport } from './routes/face-to-face'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as RecordRouteImport } from './routes/record'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -22,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CaptionsRoute = CaptionsRouteImport.update({
   id: '/captions',
   path: '/captions',
@@ -30,6 +37,11 @@ const CaptionsRoute = CaptionsRouteImport.update({
 const ConversationRoute = ConversationRouteImport.update({
   id: '/conversation',
   path: '/conversation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaceToFaceRoute = FaceToFaceRouteImport.update({
+  id: '/face-to-face',
+  path: '/face-to-face',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -55,8 +67,10 @@ const SignRoute = SignRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/face-to-face': typeof FaceToFaceRoute
   '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
   '/settings': typeof SettingsRoute
@@ -64,8 +78,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/face-to-face': typeof FaceToFaceRoute
   '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
   '/settings': typeof SettingsRoute
@@ -74,8 +90,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/face-to-face': typeof FaceToFaceRoute
   '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
   '/settings': typeof SettingsRoute
@@ -85,8 +103,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app'
     | '/captions'
     | '/conversation'
+    | '/face-to-face'
     | '/how-it-works'
     | '/record'
     | '/settings'
@@ -94,8 +114,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app'
     | '/captions'
     | '/conversation'
+    | '/face-to-face'
     | '/how-it-works'
     | '/record'
     | '/settings'
@@ -103,8 +125,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/app'
     | '/captions'
     | '/conversation'
+    | '/face-to-face'
     | '/how-it-works'
     | '/record'
     | '/settings'
@@ -113,8 +137,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   CaptionsRoute: typeof CaptionsRoute
   ConversationRoute: typeof ConversationRoute
+  FaceToFaceRoute: typeof FaceToFaceRoute
   HowItWorksRoute: typeof HowItWorksRoute
   RecordRoute: typeof RecordRoute
   SettingsRoute: typeof SettingsRoute
@@ -130,6 +156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/captions': {
       id: '/captions'
       path: '/captions'
@@ -142,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/conversation'
       fullPath: '/conversation'
       preLoaderRoute: typeof ConversationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/face-to-face': {
+      id: '/face-to-face'
+      path: '/face-to-face'
+      fullPath: '/face-to-face'
+      preLoaderRoute: typeof FaceToFaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -177,8 +217,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   CaptionsRoute: CaptionsRoute,
   ConversationRoute: ConversationRoute,
+  FaceToFaceRoute: FaceToFaceRoute,
   HowItWorksRoute: HowItWorksRoute,
   RecordRoute: RecordRoute,
   SettingsRoute: SettingsRoute,

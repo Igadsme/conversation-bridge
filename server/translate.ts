@@ -90,3 +90,65 @@ export async function translateSigns(apiKey: string, request: TranslateRequest, 
     unclear: parsed.unclear === true,
   }
 }
+
+// SMART REPLIES - suggest short conversational replies for the
+// face-to-face mode. Same Gemini model and key as translation,
+// but only ever called from the explicit "Suggest with AI"
+// button - never automatically, never per transcript update.
+
+export type RepliesRequest = {
+  context: string // the last few messages of the conversation
+}
+
+export type Replies = {
+  replies: string[] // up to 3 short suggestions
+}
+
+const REPLY_INSTRUCTIONS = `You suggest short replies for a conversation between a
+Deaf signer and a hearing person using the Sora accessibility app. The
+person taps a suggestion to send it; it is shown on screen and spoken
+aloud on their behalf.
+
+Rules:
+- Reply to the last message in the context.
+- Keep every suggestion under 60 characters.
+- Give exactly 3 suggestions, phrased for the person who taps them.
+- Stay neutral and polite. No emojis, no questions about the app itself.`
+
+const REPLY_SCHEMA = {
+  type: 'object',
+  properties: {
+    replies: { type: 'array', items: { type: 'string', maxLength: 60 }, maxItems: 3 },
+  },
+  required: ['replies'],
+}
+
+// Reject anything that isn't a short conversation context
+export function parseRepliesRequest(body: unknown): RepliesRequest {
+  const b = body as Partial<RepliesRequest> | null
+  const context = b?.context
+  if (typeof context !== 'string' || !context.trim()) throw new Error('Send the conversation context')
+  if (context.length > 4000) throw new Error('Context is too long')
+  return { context: context.trim() }
+}
+
+export async function suggestReplies(apiKey: string, request: RepliesRequest, model = DEFAULT_MODEL): Promise<Replies> {
+  const ai = new GoogleGenAI({ apiKey })
+  const response = await ai.models.generateContent({
+    model,
+    contents: JSON.stringify(request),
+    config: {
+      systemInstruction: REPLY_INSTRUCTIONS,
+      temperature: 0.4,
+      responseMimeType: 'application/json',
+      responseJsonSchema: REPLY_SCHEMA,
+    },
+  })
+  const parsed = JSON.parse(response.text ?? '{}') as Partial<Replies>
+  const replies = (parsed.replies ?? [])
+    .filter((r) => typeof r === 'string' && r.trim().length > 0)
+    .map((r) => r.trim())
+    .slice(0, 3)
+  if (replies.length === 0) throw new Error('Gemini gave no replies')
+  return { replies }
+}

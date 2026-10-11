@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
-import { DEFAULT_MODEL, parseRequest, translateSigns, type TranslateRequest, type Translation } from './translate.js'
+import { DEFAULT_MODEL, parseRepliesRequest, parseRequest, suggestReplies, translateSigns, type Replies, type RepliesRequest, type TranslateRequest, type Translation } from './translate.js'
 
 const JSON_LIMIT = 16 * 1024
 const SPEECH_TEXT_LIMIT = 2_000
@@ -19,6 +19,7 @@ export type BackendConfig = {
 type Dependencies = {
   fetch: typeof globalThis.fetch
   translate: (apiKey: string, request: TranslateRequest, model: string) => Promise<Translation>
+  suggest: (apiKey: string, request: RepliesRequest, model: string) => Promise<Replies>
 }
 
 export type ApiHandler = (req: IncomingMessage, res: ServerResponse) => Promise<boolean>
@@ -89,6 +90,7 @@ export function createApiHandler(config: BackendConfig, overrides: Partial<Depen
   const dependencies: Dependencies = {
     fetch: globalThis.fetch,
     translate: translateSigns,
+    suggest: suggestReplies,
     ...overrides,
   }
 
@@ -128,6 +130,30 @@ export function createApiHandler(config: BackendConfig, overrides: Partial<Depen
         } catch (error) {
           console.error('Gemini translation failed:', error)
           throw new HttpError(502, 'Gemini translation failed')
+        }
+        json(res, 200, result)
+        return true
+      }
+
+      if (url.pathname === '/api/replies') {
+        requireMethod(req, 'POST')
+        const apiKey = requireSecret(config.geminiApiKey, 'Gemini')
+        let request: RepliesRequest
+        try {
+          request = parseRepliesRequest(await readJson(req))
+        } catch (error) {
+          if (error instanceof HttpError) throw error
+          throw new HttpError(400, error instanceof Error ? error.message : 'Invalid replies request')
+        }
+        let result: Replies
+        try {
+          result = await dependencies.suggest(apiKey, request, config.geminiModel || DEFAULT_MODEL)
+        } catch (error) {
+          console.error('Gemini replies failed:', error)
+          const detail = error instanceof Error ? error.message : String(error)
+          // Quota and rate limits are the caller's problem to retry, not a 502.
+          if (/429|quota|rate/i.test(detail)) throw new HttpError(429, 'Gemini quota exceeded. Try again shortly.')
+          throw new HttpError(502, 'Gemini replies failed')
         }
         json(res, 200, result)
         return true

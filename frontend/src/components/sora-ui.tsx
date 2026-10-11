@@ -8,10 +8,10 @@ import {
 
 // `wide`: camera pages use the whole screen of a laptop or tablet on the counter
 // `onBack`: a back button that changes state on the same page instead of navigating
-export function Shell({ title, back = true, backTo = "/", onBack, action, wide = false, children }: { title?: string; back?: boolean; backTo?: string; onBack?: () => void; action?: ReactNode; wide?: boolean; children: ReactNode }) {
+export function Shell({ title, back = true, backTo = "/app", onBack, action, wide = false, extraWide = false, children }: { title?: string; back?: boolean; backTo?: string; onBack?: () => void; action?: ReactNode; wide?: boolean; extraWide?: boolean; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background bg-page text-foreground">
-      <div className={`mx-auto flex min-h-screen w-full flex-col px-4 pb-6 pt-3 ${wide ? "max-w-6xl" : "max-w-md"}`}>
+      <div className={`mx-auto flex min-h-screen w-full flex-col px-4 pb-6 pt-3 ${extraWide ? "max-w-[1440px]" : wide ? "max-w-6xl" : "max-w-md"}`}>
         {title && (
           <header className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center py-2">
             {back && onBack ? (

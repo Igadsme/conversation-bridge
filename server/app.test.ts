@@ -81,6 +81,52 @@ test('missing service configuration returns 503', async () => {
   assert.match(((await response.json()) as { error: string }).error, /Gemini is not configured/)
 })
 
+test('replies endpoint validates context and calls Gemini', async () => {
+  let receivedKey = ''
+  const base = await start(
+    { geminiApiKey: 'gem-secret', geminiModel: 'test-model' },
+    {
+      suggest: async (key, request, model) => {
+        receivedKey = key
+        assert.deepEqual(request, { context: 'Coffee, please.' })
+        assert.equal(model, 'test-model')
+        return { replies: ['Yes, please.', 'No, thank you.', 'Could you repeat that?'] }
+      },
+    },
+  )
+  const response = await fetch(`${base}/api/replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context: 'Coffee, please.' }),
+  })
+  assert.equal(response.status, 200)
+  assert.equal(receivedKey, 'gem-secret')
+  const body = (await response.json()) as { replies: string[] }
+  assert.equal(body.replies.length, 3)
+})
+
+test('replies endpoint rejects empty context', async () => {
+  const base = await start({ geminiApiKey: 'gem-secret' })
+  const response = await fetch(`${base}/api/replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context: '   ' }),
+  })
+  assert.equal(response.status, 400)
+  assert.match(((await response.json()) as { error: string }).error, /context/)
+})
+
+test('replies endpoint returns 503 without a Gemini key', async () => {
+  const base = await start()
+  const response = await fetch(`${base}/api/replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context: 'Hello' }),
+  })
+  assert.equal(response.status, 503)
+  assert.match(((await response.json()) as { error: string }).error, /Gemini is not configured/)
+})
+
 test('speech endpoint streams audio and keeps the API key upstream', async () => {
   let upstreamKey = ''
   const mockFetch = (async (_url: string | URL | Request, init?: RequestInit) => {
