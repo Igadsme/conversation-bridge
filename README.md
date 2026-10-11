@@ -83,6 +83,24 @@ Open the URL Vite prints (usually http://localhost:5173) and allow camera access
 `npm run dev` starts both the HTTPS Vite frontend and the API backend. Vite
 proxies `/api` requests to the backend at `http://127.0.0.1:3001`.
 
+### Frontend (the Sora UI)
+
+The polished Sora UI lives in [`frontend/`](frontend/) (TanStack Start +
+Tailwind, ported from a Lovable export). It connects to this same backend:
+a server middleware (`frontend/src/start.ts`) forwards `/api/*` to
+`http://127.0.0.1:3001` in development, so the API keys stay server-side.
+
+```bash
+cd frontend
+npm install          # Node.js 20.19+; npm 10: add --legacy-peer-deps if install errors
+npm run dev          # http://localhost:8080
+```
+
+The on-device recognition pipeline (camera, MediaPipe Holistic, the Kaggle
+TFLite model, ASL Citizen, the personal classifier) is ported into
+`frontend/src/` — when you change it, change both copies. See
+`frontend/README.md` for the full picture.
+
 The hand-tracking model lives in `public/models/hand_landmarker.task`. If it's missing, download it:
 
 ```bash
@@ -291,6 +309,7 @@ The check prints the model's inputs and outputs, downloads 2 real examples of ea
 ## Project structure
 
 ```
+frontend/                          The Sora UI (TanStack Start), connected to the backend
 public/models/holistic_landmarker.task  MediaPipe face + body + hands model (step 6)
 public/models/hand_landmarker.task   MediaPipe hand-only model (steps 3-5, no longer used)
 src/App.tsx                          App entry page

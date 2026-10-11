@@ -15,6 +15,7 @@
   padding: 16px 20px;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 12px;
+  background: var(--card);
 }
 
 .recognizer-result h2 {
@@ -79,6 +80,15 @@
   opacity: 0.75;
 }
 
+/* STABILIZATION - transient note under the status line (ignored repeats) */
+.recognizer-note {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.2rem;
+  margin: 4px 0 0;
+}
+
 .recognizer-history {
   text-align: center;
   font-size: 1.3rem;
@@ -110,8 +120,8 @@
 }
 
 .recognizer-scope button[aria-pressed='true'] {
-  background: #00a3b8;
-  border-color: #00a3b8;
+  background: var(--violet);
+  border-color: var(--violet);
   color: #fff;
 }
 

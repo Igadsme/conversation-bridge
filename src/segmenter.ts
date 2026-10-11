@@ -18,7 +18,9 @@
 
 const START_FRAMES = 2 // hand must be seen this many frames in a row to start
 const END_FRAMES = 8 // ~0.25 s at 30 fps without hands ends the sign
-const MIN_FRAMES = 5 // shorter clips are noise (a hand passing by)
+// 8 frames (~0.27 s): shorter clips are noise, e.g. a hand passing by.
+// The fastest real signs (YES, NO) are still longer than this.
+const MIN_FRAMES = 8
 const MAX_FRAMES = 150 // ~5 s: send what we have if hands never drop
 const PAD_FRAMES = 20 // ~0.67 s of resting frames kept before and after (ASL Citizen)
 

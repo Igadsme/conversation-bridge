@@ -1,0 +1,90 @@
+/* Dark tool surface for the on-device sign pipeline components
+   (CameraView, Recognizer, SentenceBuilder, TranslationPanel, Recorder),
+   ported from the original Vite app. Scoped under .sora-tools so the
+   Lovable light theme (styles.css) stays intact everywhere else.
+   The CSS variables below are the ones those components expect. */
+
+.sora-tools {
+  --text: #edeaf7;
+  --text-h: #fff;
+  --bg: #161321;
+  --card: #211d30;
+  --muted: #aaa3bb;
+  --border: rgba(255, 255, 255, 0.11);
+  --violet: #8d6cf3;
+  --teal: #5ac9c2;
+  --danger: #eb5d70;
+
+  box-sizing: border-box;
+  width: min(100%, 760px);
+  margin: 24px auto 0;
+  padding: 20px clamp(14px, 3vw, 28px) 30px;
+  color-scheme: dark;
+  color: var(--text);
+  background:
+    radial-gradient(40rem 20rem at 80% -10%, rgba(107, 74, 205, 0.25), transparent),
+    radial-gradient(30rem 18rem at -10% 110%, rgba(49, 143, 151, 0.16), transparent),
+    var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  box-shadow: 0 24px 60px -30px #000;
+  font: 17px/1.45 system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sora-tools button,
+.sora-tools input,
+.sora-tools textarea,
+.sora-tools select {
+  font: inherit;
+}
+.sora-tools button {
+  color: inherit;
+}
+.sora-tools button:focus-visible,
+.sora-tools input:focus-visible,
+.sora-tools textarea:focus-visible,
+.sora-tools select:focus-visible {
+  outline: 3px solid #ad95ff;
+  outline-offset: 2px;
+}
+
+.sora-tools h1,
+.sora-tools h2,
+.sora-tools h3 {
+  color: var(--text-h);
+}
+
+@keyframes soft-pulse {
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sora-tools *,
+  .sora-tools *::before,
+  .sora-tools *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .sora-tools {
+    padding-inline: 12px;
+  }
+  .sora-tools .recognizer-cards {
+    grid-template-columns: 1fr;
+  }
+  .sora-tools .recognizer-guess {
+    grid-template-columns: 6.3rem 1fr 2.8rem;
+    font-size: 0.95rem;
+  }
+}

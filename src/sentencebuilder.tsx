@@ -28,9 +28,10 @@ type Props = {
   onClear: () => void
   onDone: () => void
   onEdit: () => void
+  onApproved?: (sentence: string) => void
 }
 
-export default function SentenceBuilder({ chips, done, onSwap, onRemove, onClear, onDone, onEdit }: Props) {
+export default function SentenceBuilder({ chips, done, onSwap, onRemove, onClear, onDone, onEdit, onApproved }: Props) {
   // The chip whose alternatives are open, if any
   const [openId, setOpenId] = useState<number | null>(null)
   const open = chips.find((c) => c.id === openId)
@@ -57,7 +58,7 @@ export default function SentenceBuilder({ chips, done, onSwap, onRemove, onClear
         <h2>Your sentence</h2>
         <p className="sentence-gloss">{chips.map((c) => c.sign).join(' ')}</p>
         {/* key: a different sentence gets a fresh panel */}
-        <TranslationPanel key={chips.map((c) => c.sign).join(' ')} signs={chips.map((c) => c.sign)} />
+        <TranslationPanel key={chips.map((c) => c.sign).join(' ')} signs={chips.map((c) => c.sign)} onApprove={onApproved} />
         <div className="sentence-actions">
           <button onClick={onEdit}>Edit</button>
           <button onClick={onClear}>New sentence</button>

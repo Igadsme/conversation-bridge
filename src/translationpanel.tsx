@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react'
 import { translate, type Translation } from './translate'
+import { startSpeech, type SpeechPlayback } from './services'
 
 type Props = {
   signs: string[]
@@ -22,6 +23,9 @@ export default function TranslationPanel({ signs, onApprove }: Props) {
   const [chosen, setChosen] = useState(0) // 0 = sentence, 1+ = alternatives
   const [approved, setApproved] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0) // bump to try again
+  const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing' | 'done'>('idle')
+  const [speechError, setSpeechError] = useState<string | null>(null)
+  const [playback, setPlayback] = useState<SpeechPlayback | null>(null)
 
   // Ask Gemini whenever the question toggle changes or "Try again" is pressed.
   // (The parent remounts this panel with a new key when the signs change.)
@@ -44,11 +48,47 @@ export default function TranslationPanel({ signs, onApprove }: Props) {
     onApprove?.(sentence)
   }
 
+  useEffect(() => () => playback?.stop(), [playback])
+
+  async function speak() {
+    if (!approved) return
+    if (speechState === 'playing' && playback) {
+      playback.stop()
+      setPlayback(null)
+      setSpeechState('idle')
+      return
+    }
+    setSpeechError(null)
+    setSpeechState('loading')
+    try {
+      const next = await startSpeech(approved)
+      setPlayback(next)
+      setSpeechState('playing')
+      await next.finished
+      setPlayback(null)
+      setSpeechState('done')
+    } catch (err) {
+      setPlayback(null)
+      setSpeechState('idle')
+      setSpeechError(err instanceof Error ? err.message : 'Could not play speech')
+    }
+  }
+
   if (approved) {
     return (
       <div className="translation">
         <p className="translation-approved">“{approved}”</p>
-        <p className="sentence-note">Approved. Speaking it aloud comes in the next step.</p>
+        <p className="sentence-note">Approved by the signer. Nothing is spoken until you press the button.</p>
+        <button className="speak-button" onClick={speak} disabled={speechState === 'loading'}>
+          {speechState === 'loading'
+            ? 'Generating speech…'
+            : speechState === 'playing'
+              ? '■ Stop speaking'
+              : speechState === 'done'
+                ? '↻ Speak again'
+                : '▶ Speak aloud'}
+        </button>
+        {speechError && <p className="translation-error">{speechError}</p>}
       </div>
     )
   }

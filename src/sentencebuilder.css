@@ -4,8 +4,9 @@
   max-width: 760px;
   margin: 16px auto;
   padding: 16px 20px;
-  border: 2px solid #00a3b8;
-  border-radius: 12px;
+  border: 2px solid var(--violet);
+  border-radius: 22px;
+  background: var(--card);
 }
 
 .sentence-chips {
@@ -84,8 +85,8 @@
 }
 
 .sentence-done-button {
-  background: #00a3b8 !important;
-  border-color: #00a3b8 !important;
+  background: var(--violet) !important;
+  border-color: var(--violet) !important;
   color: #fff !important;
   font-weight: 700;
 }
@@ -145,8 +146,8 @@
 
 /* The sentence that will be approved */
 .translation-options button.chosen {
-  border: 2px solid #00a3b8;
-  background: rgba(0, 163, 184, 0.12);
+  border: 2px solid var(--violet);
+  background: rgba(141, 108, 243, 0.14);
   font-weight: 700;
 }
 

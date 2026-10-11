@@ -37,6 +37,12 @@ const UNSURE_BELOW = 0.3
 // can't tell "not a sign" apart at all)
 const PERSONAL_SURE = 0.7
 
+// STABILIZATION - ignore an automatically added sign when the same sign was
+// added within this window. A hand dipping out of view for a moment (END_FRAMES)
+// cuts one sign into two clips, and the second clip is usually the same sign
+// again. A deliberate repeat takes longer: hands down, raise, sign again.
+const REPEAT_WINDOW_MS = 1500
+
 type Scope = 'all' | 'vocab'
 type ModelId = 'kaggle' | 'citizen' | 'personal'
 type Choice = ModelId | 'both'
@@ -71,7 +77,11 @@ function coverage(id: ModelId, model: Recognizer): string[] {
 
 type Results = Partial<Record<ModelId, Prediction>>
 
-export default function RecognizerPage() {
+type Props = {
+  onApprovedSentence?: (sentence: string) => void
+}
+
+export default function RecognizerPage({ onApprovedSentence }: Props) {
   const [models, setModels] = useState<Partial<Record<ModelId, Recognizer>>>({})
   const [errors, setErrors] = useState<Partial<Record<ModelId, string>>>({})
   const [choice, setChoice] = useState<Choice>('both')
@@ -87,6 +97,19 @@ export default function RecognizerPage() {
   const lastClipRef = useRef<SignClip | null>(null)
   // Clips are predicted one at a time, in order
   const queueRef = useRef<Promise<void>>(Promise.resolve())
+  // STABILIZATION: the last sign added to the sentence, and when
+  const lastAddedRef = useRef<{ sign: string; at: number } | null>(null)
+  // A transient note (ignored repeats), shown under the status line
+  const [notice, setNotice] = useState<string | null>(null)
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => () => clearTimeout(noticeTimer.current), [])
+
+  function showNotice(text: string) {
+    setNotice(text)
+    clearTimeout(noticeTimer.current)
+    noticeTimer.current = setTimeout(() => setNotice(null), 3000)
+  }
 
   // Load every model; each one works on its own if another fails
   useEffect(() => {
@@ -149,14 +172,25 @@ export default function RecognizerPage() {
       setResults(next)
       const main = mainAnswer(next)
       if (addToHistory && main && main.probability >= UNSURE_BELOW) {
-        addChip(main.name, alternativesFor(next, main.name), MODEL_INFO[main.id].label)
+        addChip(main.name, alternativesFor(next, main.name), MODEL_INFO[main.id].label, true)
       }
     })
   }
 
-  // SENTENCE A: add a sign to the sentence (ignored once Done was pressed)
-  function addChip(sign: string, alternatives: string[], from: string) {
+  // SENTENCE A: add a sign to the sentence (ignored once Done was pressed).
+  // `automatic` marks additions from live recognition: those are suppressed
+  // when the same sign was just added (see REPEAT_WINDOW_MS). Tapping a guess
+  // in the model cards is always allowed - that is explicit intent.
+  function addChip(sign: string, alternatives: string[], from: string, automatic = false) {
     if (sentenceDone) return
+    if (automatic) {
+      const last = lastAddedRef.current
+      if (last && last.sign === sign && Date.now() - last.at < REPEAT_WINDOW_MS) {
+        showNotice(`Repeated ${sign} ignored — sign it again in a moment to add it twice`)
+        return
+      }
+    }
+    lastAddedRef.current = { sign, at: Date.now() }
     setChips((prev) => [...prev, { id: nextChipId.current++, sign, alternatives, from }])
   }
 
@@ -169,6 +203,7 @@ export default function RecognizerPage() {
   function clearSentence() {
     setChips([])
     setSentenceDone(false)
+    lastAddedRef.current = null
   }
 
   function change(nextChoice: Choice, nextScope: Scope) {
@@ -195,12 +230,18 @@ export default function RecognizerPage() {
               ? '● Watching your sign…'
               : 'Raise your hands, sign, then lower them out of view'}
       </p>
+      {notice && <p className="recognizer-note" role="status">{notice}</p>}
       {activeIds.map((id) =>
         errors[id] ? (
           <p key={id} className="recognizer-meta">
             {MODEL_INFO[id].label}: {errors[id]}
           </p>
         ) : null,
+      )}
+      {errors.kaggle && choice === 'both' && (
+        <p className="recognizer-meta">
+          Combined mode still answers with ASL Citizen and Personal. Run sh scripts/setup_model.sh to add the Kaggle model.
+        </p>
       )}
 
       <nav className="recognizer-scope" aria-label="Model">
@@ -281,6 +322,7 @@ export default function RecognizerPage() {
         onClear={clearSentence}
         onDone={() => setSentenceDone(true)}
         onEdit={() => setSentenceDone(false)}
+        onApproved={onApprovedSentence}
       />
 
       {activeIds.map((id) => {
