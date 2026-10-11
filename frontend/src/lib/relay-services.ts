@@ -61,7 +61,7 @@ export type SpeechPlayback = {
 
 /** Speak signer-approved text with ElevenLabs text-to-speech.
  *  The backend streams the MP3; nothing is spoken until this is called. */
-export async function startSpeech(text: string): Promise<SpeechPlayback> {
+export async function startSpeech(text: string, playbackRate = 1): Promise<SpeechPlayback> {
   const response = await fetch('/api/elevenlabs/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -71,6 +71,7 @@ export async function startSpeech(text: string): Promise<SpeechPlayback> {
 
   const url = URL.createObjectURL(await response.blob())
   const audio = new Audio(url)
+  audio.playbackRate = playbackRate
   let settled = false
   let resolveFinished: () => void
   let rejectFinished: (error: Error) => void

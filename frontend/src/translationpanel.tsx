@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { translate, type Translation } from './translate'
 import { startSpeech, type SpeechPlayback } from './lib/relay-services'
+import { loadSettings } from './lib/settings'
 
 type Props = {
   signs: string[]
@@ -32,6 +33,9 @@ export default function TranslationPanel({ signs, onApprove }: Props) {
   const key = signs.join(' ')
   useEffect(() => {
     let cancelled = false
+    setTranslation(null)
+    setError(null)
+    setChosen(0)
     translate(key.split(' '), question)
       .then((t) => !cancelled && setTranslation(t))
       .catch((err) => !cancelled && setError(err instanceof Error ? err.message : String(err)))
@@ -61,7 +65,7 @@ export default function TranslationPanel({ signs, onApprove }: Props) {
     setSpeechError(null)
     setSpeechState('loading')
     try {
-      const next = await startSpeech(approved)
+      const next = await startSpeech(approved, loadSettings().speechRate)
       setPlayback(next)
       setSpeechState('playing')
       await next.finished

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronRight, Hand, Mic, Users } from "lucide-react";
+import { ChevronRight, Hand, HelpCircle, Mic, Settings, Users } from "lucide-react";
 import { PrivacyDialog, Shell, SoraMark } from "@/components/sora-ui";
 import { checkHealth, type ServiceHealth } from "@/lib/relay-services";
 
@@ -68,7 +68,11 @@ function Home() {
         ))}
       </nav>
       <div className="mt-6 text-center">
-        <Link to="/record" className="text-sm font-semibold text-primary underline underline-offset-4">
+        <div className="flex justify-center gap-5 text-sm font-semibold">
+          <Link to="/settings" className="inline-flex items-center gap-1.5 text-primary underline underline-offset-4"><Settings className="h-4 w-4" aria-hidden />Settings</Link>
+          <Link to="/how-it-works" className="inline-flex items-center gap-1.5 text-primary underline underline-offset-4"><HelpCircle className="h-4 w-4" aria-hidden />How it works</Link>
+        </div>
+        <Link to="/record" className="mt-4 inline-block text-xs font-semibold text-muted-foreground underline underline-offset-4">
           Personal training &amp; model calibration
         </Link>
       </div>
@@ -77,6 +81,7 @@ function Home() {
         <ServiceBadge label="ElevenLabs" ready={health?.services.elevenlabs ?? false} />
         {!health && <span className="text-xs text-muted-foreground">Backend unreachable — run the API server on port 3001</span>}
       </div>
+      <p className="mt-4 text-center text-xs text-muted-foreground">Before starting, allow camera access for signing and microphone access for captions.</p>
       <p className="mt-auto pt-6 text-center text-xs text-muted-foreground">
         Sign recognition is limited and developing. Not a substitute for a qualified interpreter, especially in medical, legal, or emergency situations.
       </p>

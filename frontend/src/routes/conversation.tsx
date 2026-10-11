@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useScribe } from "@elevenlabs/react";
-import { Check, Ear, Hand, Loader2, Mic, Pencil, RotateCcw, Send, Volume2 } from "lucide-react";
+import { Check, Ear, Hand, HelpCircle, Loader2, Mic, Pencil, RotateCcw, Send, Volume2 } from "lucide-react";
 import { PrototypeNote, Shell } from "@/components/sora-ui";
 import Recognizer from "@/recognizer";
 import { getScribeToken, startSpeech } from "@/lib/relay-services";
+import { loadSettings, SETTINGS_EVENT, type SoraSettings } from "@/lib/settings";
 import "@/sora-tools.css";
 
 export const Route = createFileRoute("/conversation")({
@@ -37,7 +38,9 @@ function friendlyError(error: Error | Event): string {
 }
 
 function Conversation() {
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
+    try { return JSON.parse(sessionStorage.getItem("sora-transcript") ?? "[]") as Msg[] } catch { return [] }
+  });
   // "chat" = message list with the two mode buttons; "sign" = the real
   // sign pipeline (camera → recognition → sentence → translation → speak)
   const [view, setView] = useState<"chat" | "sign">("chat");
@@ -45,6 +48,10 @@ function Conversation() {
   const [busy, setBusy] = useState<"speak" | "listen" | null>(null);
   const [partial, setPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmTranslations, setConfirmTranslations] = useState(() => loadSettings().confirmTranslations);
+  const [pendingSentence, setPendingSentence] = useState<string | null>(null);
+  const [pendingDraft, setPendingDraft] = useState("");
+  const [editingPending, setEditingPending] = useState(false);
   const id = useRef(1);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +74,16 @@ function Conversation() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [msgs.length, partial]);
   useEffect(() => () => scribe.disconnect(), []);
+  useEffect(() => {
+    sessionStorage.setItem("sora-transcript", JSON.stringify(msgs));
+  }, [msgs]);
+  useEffect(() => {
+    const onSettings = (event: Event) => setConfirmTranslations((event as CustomEvent<SoraSettings>).detail.confirmTranslations)
+    const onClear = () => { setMsgs([]); setPartial(""); setPendingSentence(null) }
+    window.addEventListener(SETTINGS_EVENT, onSettings)
+    window.addEventListener("sora-clear-transcript", onClear)
+    return () => { window.removeEventListener(SETTINGS_EVENT, onSettings); window.removeEventListener("sora-clear-transcript", onClear) }
+  }, []);
 
   function add(who: Msg["who"], text: string, typedMsg = false) {
     setMsgs((m) => [...m, { id: id.current++, who, text, at: Date.now(), typed: typedMsg }]);
@@ -76,12 +93,19 @@ function Conversation() {
   // then speak it with ElevenLabs (via the backend). If speech fails, the
   // message stays on screen so the other person can still read it.
   async function approveAndSpeak(text: string, typedMsg = false) {
+    if (!typedMsg && confirmTranslations) {
+      setPendingSentence(text);
+      setPendingDraft(text);
+      setEditingPending(false);
+      setView("chat");
+      return;
+    }
     add("you", text, typedMsg);
     setView("chat");
     setBusy("speak");
     setError(null);
     try {
-      const playback = await startSpeech(text);
+      const playback = await startSpeech(text, loadSettings().speechRate);
       await playback.finished;
     } catch (reason) {
       const detail = reason instanceof Error ? reason.message : "unknown error";
@@ -89,6 +113,14 @@ function Conversation() {
     } finally {
       setBusy(null);
     }
+  }
+
+  function speakPending() {
+    const text = pendingDraft.trim();
+    if (!text) return;
+    setPendingSentence(null);
+    setEditingPending(false);
+    void approveAndSpeak(text);
   }
 
   async function toggleListen() {
@@ -119,6 +151,10 @@ function Conversation() {
     setTyped("");
   }
 
+  function handleApprovedSentence(sentence: string) {
+    void approveAndSpeak(sentence);
+  }
+
   const listening = scribe.status === "connecting" || scribe.isConnected;
 
   if (view === "sign") {
@@ -128,7 +164,7 @@ function Conversation() {
           Sign your reply. Review the English, then approve it — Sora speaks it into the conversation.
         </p>
         <div className="sora-tools">
-          <Recognizer onApprovedSentence={(sentence) => void approveAndSpeak(sentence)} />
+          <Recognizer onApprovedSentence={handleApprovedSentence} />
         </div>
         <PrototypeNote>Camera video stays in this browser. Nothing is spoken until you approve.</PrototypeNote>
       </Shell>
@@ -138,7 +174,7 @@ function Conversation() {
   return (
     <Shell title="Conversation Mode" action={
       <button type="button" aria-label="New conversation" disabled={!msgs.length || busy !== null}
-        onClick={() => { setMsgs([]); setPartial(""); }}
+        onClick={() => { setMsgs([]); setPartial(""); setPendingSentence(null); }}
         className="focus-ring grid h-11 w-11 place-items-center rounded-full hover:bg-muted">
         <RotateCcw className="h-5 w-5" aria-hidden />
       </button>
@@ -164,6 +200,19 @@ function Conversation() {
             <p className="text-xs font-semibold text-muted-foreground">Them (speech) · hearing…</p>
             <p className="mt-1.5 text-2xl font-medium leading-snug opacity-80">{partial}<span className="caret">▍</span></p>
           </div>
+        )}
+        {pendingSentence && (
+          <section className="rounded-3xl border border-primary/40 bg-primary/10 p-4 shadow-soft" aria-labelledby="review-title">
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary"><Check className="h-4 w-4" aria-hidden /><h2 id="review-title">Review before speaking</h2></div>
+            {editingPending ? <textarea autoFocus value={pendingDraft} onChange={(e) => setPendingDraft(e.target.value)} className="mt-3 min-h-24 w-full rounded-2xl border border-input bg-background p-3 text-lg leading-snug focus-visible:outline-2 focus-visible:outline-ring" aria-label="Edit interpretation" /> : <p className="mt-3 text-2xl font-medium leading-snug">“{pendingSentence}”</p>}
+            <p className="mt-2 text-sm text-muted-foreground">Check the interpretation, then choose what Sora should say.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={speakPending} disabled={!pendingDraft.trim() || busy === "speak"} className="focus-ring inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"><Volume2 className="h-4 w-4" aria-hidden />Speak</button>
+              <button type="button" onClick={() => setEditingPending((value) => { if (value) setPendingSentence(pendingDraft); return !value })} className="focus-ring inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 font-semibold hover:bg-muted"><Pencil className="h-4 w-4" aria-hidden />{editingPending ? "Done editing" : "Edit"}</button>
+              <button type="button" onClick={() => { setPendingSentence(null); setView("sign") }} className="focus-ring inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 font-semibold hover:bg-muted"><RotateCcw className="h-4 w-4" aria-hidden />Retry</button>
+              <button type="button" onClick={() => { setTyped("Could you repeat that?"); setPendingSentence(null) }} className="focus-ring inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 font-semibold hover:bg-muted"><HelpCircle className="h-4 w-4" aria-hidden />Ask to repeat</button>
+            </div>
+          </section>
         )}
         {error && <p className="text-center text-sm font-medium text-warning">{error}</p>}
         <div ref={endRef} />

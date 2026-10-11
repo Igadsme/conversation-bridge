@@ -182,6 +182,17 @@
   }
 }
 
+html[data-contrast="high"] {
+  --foreground: oklch(1 0 0);
+  --muted-foreground: oklch(0.9 0.02 275);
+  --border: oklch(1 0 0 / 28%);
+  --input: oklch(1 0 0 / 30%);
+}
+
+html[data-caption-size="S"] .caption-text { font-size: 1.5rem; }
+html[data-caption-size="M"] .caption-text { font-size: 1.875rem; }
+html[data-caption-size="L"] .caption-text { font-size: 2.25rem; }
+
 @utility focus-ring {
   &:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
 }

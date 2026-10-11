@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CaptionsRouteImport } from './routes/captions'
 import { Route as ConversationRouteImport } from './routes/conversation'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as RecordRouteImport } from './routes/record'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignRouteImport } from './routes/sign'
 
 const IndexRoute = IndexRouteImport.update({
@@ -30,9 +32,19 @@ const ConversationRoute = ConversationRouteImport.update({
   path: '/conversation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecordRoute = RecordRouteImport.update({
   id: '/record',
   path: '/record',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignRoute = SignRouteImport.update({
@@ -45,14 +57,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
+  '/settings': typeof SettingsRoute
   '/sign': typeof SignRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
+  '/settings': typeof SettingsRoute
   '/sign': typeof SignRoute
 }
 export interface FileRoutesById {
@@ -60,22 +76,48 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/captions': typeof CaptionsRoute
   '/conversation': typeof ConversationRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/record': typeof RecordRoute
+  '/settings': typeof SettingsRoute
   '/sign': typeof SignRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/captions' | '/conversation' | '/record' | '/sign'
+  fullPaths:
+    | '/'
+    | '/captions'
+    | '/conversation'
+    | '/how-it-works'
+    | '/record'
+    | '/settings'
+    | '/sign'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/captions' | '/conversation' | '/record' | '/sign'
-  id: '__root__' | '/' | '/captions' | '/conversation' | '/record' | '/sign'
+  to:
+    | '/'
+    | '/captions'
+    | '/conversation'
+    | '/how-it-works'
+    | '/record'
+    | '/settings'
+    | '/sign'
+  id:
+    | '__root__'
+    | '/'
+    | '/captions'
+    | '/conversation'
+    | '/how-it-works'
+    | '/record'
+    | '/settings'
+    | '/sign'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CaptionsRoute: typeof CaptionsRoute
   ConversationRoute: typeof ConversationRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   RecordRoute: typeof RecordRoute
+  SettingsRoute: typeof SettingsRoute
   SignRoute: typeof SignRoute
 }
 
@@ -102,11 +144,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConversationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/record': {
       id: '/record'
       path: '/record'
       fullPath: '/record'
       preLoaderRoute: typeof RecordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign': {
@@ -123,7 +179,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CaptionsRoute: CaptionsRoute,
   ConversationRoute: ConversationRoute,
+  HowItWorksRoute: HowItWorksRoute,
   RecordRoute: RecordRoute,
+  SettingsRoute: SettingsRoute,
   SignRoute: SignRoute,
 }
 export const routeTree = rootRouteImport

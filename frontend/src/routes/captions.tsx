@@ -4,6 +4,7 @@ import { useScribe } from "@elevenlabs/react";
 import { Mic, Square } from "lucide-react";
 import { PrototypeNote, Shell, Wave } from "@/components/sora-ui";
 import { getScribeToken } from "@/lib/relay-services";
+import { loadSettings, saveSettings, SETTINGS_EVENT, type SoraSettings } from "@/lib/settings";
 
 export const Route = createFileRoute("/captions")({
   head: () => ({
@@ -36,7 +37,7 @@ function Captions() {
   const [on, setOn] = useState(false);
   const [partial, setPartial] = useState("");
   const [lines, setLines] = useState<string[]>([]);
-  const [size, setSize] = useState<keyof typeof SIZES>("L");
+  const [size, setSize] = useState<keyof typeof SIZES>(() => loadSettings().captionSize);
   const [error, setError] = useState<string | null>(null);
 
   const scribe = useScribe({
@@ -48,10 +49,19 @@ function Captions() {
       setPartial("");
       setLines((current) => [...current, clean]);
     },
-    onError: (scribeError) => setError(friendlyError(scribeError)),
+    onError: (scribeError) => {
+      setOn(false);
+      setPartial("");
+      setError(friendlyError(scribeError));
+    },
   });
 
   useEffect(() => () => scribe.disconnect(), []);
+  useEffect(() => {
+    const onSettings = (event: Event) => setSize((event as CustomEvent<SoraSettings>).detail.captionSize)
+    window.addEventListener(SETTINGS_EVENT, onSettings)
+    return () => window.removeEventListener(SETTINGS_EVENT, onSettings)
+  }, []);
 
   async function toggle() {
     setError(null);
@@ -95,7 +105,7 @@ function Captions() {
 
       <section aria-live="polite" className="mt-6 rounded-3xl border border-border bg-card p-5 shadow-soft">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Live transcription</p>
-        <p className={`mt-3 min-h-24 font-display font-semibold leading-tight ${SIZES[size]} ${partial ? "opacity-80" : ""}`}>
+        <p className={`caption-text mt-3 min-h-24 font-display font-semibold leading-tight ${SIZES[size]} ${partial ? "opacity-80" : ""}`}>
           {current || <span className="text-muted-foreground">Captions will appear here.</span>}
           {partial && <span className="caret">▍</span>}
         </p>
@@ -110,7 +120,7 @@ function Captions() {
 
       <div role="group" aria-label="Caption text size" className="mt-4 grid grid-cols-3 rounded-2xl border border-border bg-muted p-1">
         {(["S", "M", "L"] as const).map((v) => (
-          <button key={v} type="button" aria-pressed={size === v} onClick={() => setSize(v)}
+          <button key={v} type="button" aria-pressed={size === v} onClick={() => { setSize(v); saveSettings({ ...loadSettings(), captionSize: v }) }}
             className={`focus-ring h-10 rounded-xl text-sm font-semibold transition ${size === v ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}>
             {v === "S" ? "Small" : v === "M" ? "Medium" : "Large"}
           </button>
